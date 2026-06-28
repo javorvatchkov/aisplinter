@@ -1,0 +1,65 @@
+{
+  "name": "@aisplinter/server",
+  "version": "0.1.0",
+  "description": "Self-hosted AI middleware — provision keys, budgets, proxy, webhooks",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/javorvatchkov/aisplinter.git",
+    "directory": "packages/server"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./next": {
+      "types": "./dist/next.d.ts",
+      "import": "./dist/next.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src/public"
+  ],
+  "scripts": {
+    "prepack": "npm run build",
+    "build": "tsc -p tsconfig.json && node scripts/copy-public.mjs",
+    "dev": "tsc -p tsconfig.json --watch",
+    "test": "tsc -p tsconfig.json && node --test dist/utils/escapeHtml.test.js",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "setup": "node dist/cli/setup.js"
+  },
+  "bin": {
+    "aisplinter-setup": "./dist/cli/setup.js"
+  },
+  "dependencies": {
+    "hono": "^4.4.0",
+    "drizzle-orm": "^0.30.0",
+    "postgres": "^3.4.4",
+    "zod": "^3.23.0",
+    "jose": "^5.4.0",
+    "nanoid": "^5.0.7"
+  },
+  "peerDependencies": {
+    "@hono/node-server": "^1.11.0"
+  },
+  "peerDependenciesMeta": {
+    "@hono/node-server": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "drizzle-kit": "^0.21.0",
+    "typescript": "^5.4.5"
+  }
+}

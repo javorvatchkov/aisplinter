@@ -1,0 +1,35 @@
+{
+  "name": "@aisplinter/svelte",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./PlanPicker.svelte": "./src/components/PlanPicker.svelte",
+    "./ProviderKeyCard.svelte": "./src/components/ProviderKeyCard.svelte",
+    "./UsageBanner.svelte": "./src/components/UsageBanner.svelte"
+  },
+  "files": [
+    "dist",
+    "src/components"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "peerDependencies": {
+    "svelte": ">=5.0.0"
+  },
+  "dependencies": {
+    "@aisplinter/core": "workspace:*"
+  },
+  "devDependencies": {
+    "svelte": "^5.0.0",
+    "typescript": "^5.4.5"
+  }
+}

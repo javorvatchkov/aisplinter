@@ -1,0 +1,64 @@
+services:
+  aisplinter-api:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    environment:
+      - DATABASE_URL=postgres://aisplinter:aisplinter@postgres:5432/aisplinter
+      - AISPLINTER_UPSTREAM_ADAPTER=${AISPLINTER_UPSTREAM_ADAPTER:-openrouter}
+      - PORT=8747
+    ports:
+      - "8747:8747"
+    depends_on:
+      - postgres
+    networks:
+      - aisplinter-network
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=aisplinter
+      - POSTGRES_PASSWORD=aisplinter
+      - POSTGRES_DB=aisplinter
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - aisplinter-network
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - aisplinter-api
+    networks:
+      - aisplinter-network
+
+  # LiteLLM profile (optional)
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    profiles:
+      - litellm
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./infra/litellm/config.yaml:/app/config.yaml
+    environment:
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+    networks:
+      - aisplinter-network
+
+networks:
+  aisplinter-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

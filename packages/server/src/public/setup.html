@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AISplinter | Setup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        [v-cloak] { display: none; }
+        .step-dot { width: 8px; height: 8px; border-radius: 9999px; }
+        .step-dot-active { background: #4f46e5; }
+        .step-dot-done { background: #10b981; }
+        .step-dot-pending { background: #d1d5db; }
+        pre { white-space: pre-wrap; word-break: break-all; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+    <div id="app" v-cloak class="min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="mb-6 flex items-center gap-2">
+            <template v-for="(s, i) in stepLabels" :key="s">
+                <div :class="['step-dot', stepIndex >= i ? (stepIndex > i ? 'step-dot-done' : 'step-dot-active') : 'step-dot-pending']"></div>
+                <span v-if="i < stepLabels.length - 1" class="w-6 h-px bg-gray-300"></span>
+            </template>
+        </div>
+
+        <div class="max-w-lg w-full bg-white rounded-xl shadow-lg p-8">
+            <!-- Welcome -->
+            <div v-if="step === 'welcome'" class="text-center">
+                <div class="w-16 h-16 bg-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-white text-3xl font-bold mb-6">AS</div>
+                <h1 class="text-2xl font-bold mb-2">Welcome to AISplinter</h1>
+                <p class="text-gray-600 mb-6 text-sm">Middleware between your app and LLM providers — provision users, enforce budgets, proxy chat.</p>
+
+                <div v-if="status.canBootstrapFromEnv" class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-left text-sm text-emerald-900">
+                    <p class="font-semibold">Your <code class="bg-emerald-100 px-1 rounded text-xs">.env</code> looks complete.</p>
+                    <p class="mt-1 text-emerald-800/90">Restart the server — AISplinter will bootstrap automatically. Then open <strong>Admin</strong>.</p>
+                    <button @click="goAdmin" class="mt-3 w-full rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 text-sm">Open Admin</button>
+                </div>
+
+                <div v-else class="space-y-3 mb-6 text-left">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Choose a setup path</p>
+                    <button @click="step = databaseReady ? 'config' : 'database'" class="w-full rounded-lg border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-50 px-4 py-3 text-left transition">
+                        <p class="font-semibold text-indigo-900">Setup wizard</p>
+                        <p class="text-xs text-indigo-700/80 mt-0.5">Connect Postgres + upstream provider step by step</p>
+                    </button>
+                    <div class="rounded-lg border border-gray-200 px-4 py-3 text-left">
+                        <p class="font-semibold text-gray-800">Or configure with <code class="bg-gray-100 px-1 rounded text-xs">.env</code></p>
+                        <p class="text-xs text-gray-500 mt-1">Copy <code class="bg-gray-100 px-1 rounded">packages/server/.env.example</code> — see <code class="bg-gray-100 px-1 rounded">docs/DEV_SETUP.md</code></p>
+                    </div>
+                </div>
+
+                <p class="text-xs text-gray-400">Server secrets stay in host <code class="bg-gray-100 px-1 rounded">.env</code>. Client apps only need URL + dev key.</p>
+            </div>
+
+            <!-- Database -->
+            <div v-if="step === 'database'">
+                <h2 class="text-xl font-bold mb-2">PostgreSQL</h2>
+                <p class="text-sm text-gray-600 mb-4">AISplinter uses Postgres only. Pick how it shares (or doesn't share) your app's database.</p>
+
+                <div class="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700 space-y-2">
+                    <p><strong>Separate database</strong> (recommended) — same server, database <code class="bg-white px-1 rounded">aisplinter</code></p>
+                    <p><strong>Separate schema</strong> — set schema below (e.g. <code class="bg-white px-1 rounded">aisplinter</code>)</p>
+                    <p><strong>Same schema</strong> — tables are prefixed <code class="bg-white px-1 rounded">aisplinter_*</code> (no collision with your <code class="bg-white px-1 rounded">users</code> table)</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div v-if="status.neonOAuthConfigured" class="rounded-lg border border-cyan-200 bg-cyan-50 p-4">
+                        <p class="text-sm font-semibold text-cyan-900">Create in your Neon account</p>
+                        <p class="text-xs text-cyan-800/90 mt-1">OAuth Model A — database stays in <em>your</em> Neon project (free tier).</p>
+                        <a :href="neonAuthorizeUrl"
+                            class="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-cyan-700 hover:bg-cyan-800 text-white font-semibold py-2.5 text-sm transition">
+                            Connect Neon
+                        </a>
+                    </div>
+                    <div v-else class="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-500">
+                        Neon one-click: set <code class="bg-gray-100 px-1 rounded">NEON_OAUTH_CLIENT_ID</code> + <code class="bg-gray-100 px-1 rounded">NEON_OAUTH_CLIENT_SECRET</code> on the server — see <code class="bg-gray-100 px-1 rounded">docs/DATABASE.md</code>
+                    </div>
+
+                    <div class="relative flex items-center py-1">
+                        <div class="flex-grow border-t border-gray-200"></div>
+                        <span class="mx-3 text-xs text-gray-400 uppercase">or paste URL</span>
+                        <div class="flex-grow border-t border-gray-200"></div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">DATABASE_URL</label>
+                        <textarea v-model="databaseUrl" rows="3" placeholder="postgresql://user:pass@host:5432/aisplinter?sslmode=require"
+                            class="w-full border rounded-lg px-4 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Postgres schema <span class="text-gray-400 font-normal">(optional)</span></label>
+                        <input v-model="dbSchema" type="text" placeholder="aisplinter"
+                            class="w-full border rounded-lg px-4 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <p class="text-xs text-gray-500 mt-1">Leave empty for <code class="bg-gray-100 px-1 rounded">public</code>. Tables are always named <code class="bg-gray-100 px-1 rounded">aisplinter_*</code>.</p>
+                    </div>
+
+                    <div class="rounded-lg border border-dashed border-gray-300 px-3 py-2 text-xs text-gray-600 font-mono">
+                        CLI: <code>npx aisplinter-setup database --interactive</code>
+                    </div>
+
+                    <div v-if="error" class="bg-red-50 text-red-600 p-3 rounded-lg text-sm">{{ error }}</div>
+                    <button @click="saveDatabase" :disabled="loading || !databaseUrl.trim()"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center">
+                        <svg v-if="loading" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Connect Database
+                    </button>
+                </div>
+            </div>
+
+            <!-- Upstream config -->
+            <div v-if="step === 'config'">
+                <h2 class="text-xl font-bold mb-2">Upstream provider</h2>
+                <p class="text-sm text-gray-600 mb-6">OpenRouter management key mints per-user keys. Create one at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener" class="text-indigo-600 underline">openrouter.ai/keys</a>.</p>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+                        <input v-model="form.name" type="text" placeholder="e.g. MyApp" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Upstream Adapter</label>
+                        <select v-model="form.upstreamAdapter" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <option value="openrouter">OpenRouter (Cloud)</option>
+                            <option value="litellm">LiteLLM (On-Prem)</option>
+                        </select>
+                    </div>
+                    <div v-if="form.upstreamAdapter === 'openrouter'">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">OpenRouter Management Key</label>
+                        <input v-model="form.openrouterKey" type="password" placeholder="sk-or-v1-..." class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <p class="text-xs text-gray-500 mt-1">Provisioning key — not a plain inference key.</p>
+                    </div>
+                    <div v-if="form.upstreamAdapter === 'litellm'" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">LiteLLM Base URL</label>
+                            <input v-model="form.litellmBaseUrl" type="text" placeholder="http://127.0.0.1:4000" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">LiteLLM Master Key</label>
+                            <input v-model="form.litellmKey" type="password" placeholder="sk-..." class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                    </div>
+                    <div v-if="error" class="bg-red-50 text-red-600 p-3 rounded-lg text-sm">{{ error }}</div>
+                    <button @click="submit" :disabled="loading" class="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center">
+                        <svg v-if="loading" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Create project
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dev key -->
+            <div v-if="step === 'success'" class="text-center">
+                <div class="w-16 h-16 bg-green-100 rounded-full mx-auto flex items-center justify-center text-green-600 text-3xl mb-6">✓</div>
+                <h2 class="text-2xl font-bold mb-2">Project created</h2>
+                <p class="text-gray-600 mb-4 text-sm">Save this <strong>Developer API Key</strong> to your server <code class="bg-gray-100 px-1 rounded text-xs">.env</code> as <code class="bg-gray-100 px-1 rounded text-xs">AISPLINTER_DEV_KEY</code>.</p>
+                <div class="bg-gray-100 p-4 rounded-lg font-mono text-sm break-all mb-4 select-all text-left">{{ apiKey }}</div>
+                <p class="text-xs text-gray-500 mb-6">Base URL: <code class="bg-gray-100 px-1 rounded">{{ serverUrl }}</code></p>
+                <button @click="step = 'integrate'" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition">Next: connect your app</button>
+            </div>
+
+            <!-- Integrate -->
+            <div v-if="step === 'integrate'">
+                <h2 class="text-xl font-bold mb-2">Connect your app</h2>
+                <p class="text-sm text-gray-600 mb-4">Two layers: server secrets in the host process, client vars for provisioning.</p>
+
+                <div class="flex gap-1 mb-4 text-xs font-semibold uppercase tracking-wide">
+                    <button v-for="tab in integrateTabs" :key="tab.id" @click="integrateTab = tab.id"
+                        :class="integrateTab === tab.id ? 'bg-indigo-100 text-indigo-800' : 'text-gray-500 hover:text-gray-700'"
+                        class="rounded-lg px-3 py-2 transition">{{ tab.label }}</button>
+                </div>
+
+                <div v-if="integrateTab === 'server'" class="space-y-2">
+                    <p class="text-xs text-gray-500">Host app <code class="bg-gray-100 px-1 rounded">.env</code> (Next.js, standalone, etc.)</p>
+                    <pre class="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs font-mono">{{ serverEnvBlock }}</pre>
+                </div>
+                <div v-if="integrateTab === 'client'" class="space-y-2">
+                    <p class="text-xs text-gray-500">Backend / desktop shell — never expose dev key in browser bundles</p>
+                    <pre class="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs font-mono">{{ clientEnvBlock }}</pre>
+                </div>
+                <div v-if="integrateTab === 'nextjs'" class="space-y-2">
+                    <p class="text-xs text-gray-500">Next.js embed — see <code class="bg-gray-100 px-1 rounded">apps/demo-next</code></p>
+                    <pre class="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs font-mono">{{ nextjsSnippet }}</pre>
+                </div>
+                <div v-if="integrateTab === 'curl'" class="space-y-2">
+                    <p class="text-xs text-gray-500">Provision a test user from your terminal</p>
+                    <pre class="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs font-mono">{{ curlProvision }}</pre>
+                </div>
+
+                <button @click="step = 'verify'" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition">Next: verify provision</button>
+            </div>
+
+            <!-- Verify -->
+            <div v-if="step === 'verify'">
+                <h2 class="text-xl font-bold mb-2">Verify provision</h2>
+                <p class="text-sm text-gray-600 mb-4">Calls <code class="bg-gray-100 px-1 rounded text-xs">POST /v1/users/provision</code> with your dev key.</p>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Plan SKU</label>
+                    <select v-model="verifyPlanSku" class="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option v-for="p in plans" :key="p.sku" :value="p.sku">{{ p.sku }} — {{ p.displayName }} (${{ p.budgetUsd }}/{{ p.period }})</option>
+                    </select>
+                </div>
+
+                <div v-if="verifyError" class="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4">{{ verifyError }}</div>
+                <div v-if="verifyResult" class="bg-emerald-50 text-emerald-800 p-3 rounded-lg text-sm mb-4 font-mono text-xs break-all">{{ verifyResult }}</div>
+
+                <button @click="runVerify" :disabled="verifyLoading" class="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition mb-3">
+                    {{ verifyLoading ? 'Provisioning…' : 'Run test provision' }}
+                </button>
+                <button @click="goAdmin" class="w-full border border-gray-300 hover:bg-gray-50 text-gray-800 font-semibold py-3 rounded-lg transition">Open Admin dashboard</button>
+                <p class="mt-4 text-xs text-center text-gray-400">Full guide: <code class="bg-gray-100 px-1 rounded">docs/DEV_SETUP.md</code></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    step: 'welcome',
+                    loading: false,
+                    error: null,
+                    apiKey: null,
+                    databaseUrl: '',
+                    dbSchema: '',
+                    databaseReady: false,
+                    serverUrl: window.location.origin,
+                    status: {},
+                    plans: [{ sku: 'ai_starter', displayName: 'AI Starter', budgetUsd: 5, period: 'monthly' }],
+                    verifyPlanSku: 'ai_starter',
+                    verifyLoading: false,
+                    verifyError: null,
+                    verifyResult: null,
+                    integrateTab: 'server',
+                    integrateTabs: [
+                        { id: 'server', label: 'Server' },
+                        { id: 'client', label: 'Client' },
+                        { id: 'nextjs', label: 'Next.js' },
+                        { id: 'curl', label: 'curl' },
+                    ],
+                    form: {
+                        name: 'MyApp',
+                        upstreamAdapter: 'openrouter',
+                        openrouterKey: '',
+                        litellmKey: '',
+                        litellmBaseUrl: 'http://127.0.0.1:4000'
+                    }
+                };
+            },
+            computed: {
+                stepLabels() {
+                    return ['Start', 'DB', 'Provider', 'Key', 'App', 'Verify'];
+                },
+                stepIndex() {
+                    const map = { welcome: 0, database: 1, config: 2, success: 3, integrate: 4, verify: 5 };
+                    return map[this.step] ?? 0;
+                },
+                serverEnvBlock() {
+                    const schemaLine = this.dbSchema.trim()
+                        ? 'AISPLINTER_DB_SCHEMA=' + this.dbSchema.trim()
+                        : '# AISPLINTER_DB_SCHEMA=aisplinter  # optional';
+                    return [
+                        '# AISplinter server (host .env)',
+                        'DATABASE_URL=postgresql://…',
+                        schemaLine,
+                        'AISPLINTER_UPSTREAM_ADAPTER=openrouter',
+                        'AISPLINTER_OPENROUTER_KEY=sk-or-v1-…',
+                        'AISPLINTER_PROJECT_NAME=' + (this.form.name || 'MyApp'),
+                        'AISPLINTER_DEV_KEY=' + (this.apiKey || 'aisplinter_dev_…'),
+                        '# JWT_SECRET=…  # standalone only',
+                    ].join('\n');
+                },
+                neonAuthorizeUrl() {
+                    const q = this.dbSchema.trim()
+                        ? '?dbSchema=' + encodeURIComponent(this.dbSchema.trim())
+                        : '';
+                    return 'setup/neon/authorize' + q;
+                },
+                clientEnvBlock() {
+                    return [
+                        '# Client / integrator (.env)',
+                        'AISPLINTER_BASE_URL=' + this.serverUrl,
+                        'AISPLINTER_DEV_KEY=' + (this.apiKey || 'aisplinter_dev_…'),
+                        '# AISPLINTER_PLAN_SKU=ai_starter  # optional default',
+                    ].join('\n');
+                },
+                nextjsSnippet() {
+                    return [
+                        "import { createAisplinterApp } from '@aisplinter/server';",
+                        "import { createAisplinterSingleton } from '@aisplinter/server/next';",
+                        '',
+                        "export const getAisplinterApp = createAisplinterSingleton(async () => {",
+                        "  const { app } = await createAisplinterApp({",
+                        "    basePath: '/api/aisplinter',",
+                        "    setupWizard: process.env.NODE_ENV !== 'production',",
+                        '  });',
+                        '  return app;',
+                        '});',
+                    ].join('\n');
+                },
+                curlProvision() {
+                    const key = this.apiKey || 'aisplinter_dev_…';
+                    return [
+                        'curl -s -X POST "' + this.serverUrl + '/v1/users/provision" \\',
+                        '  -H "Authorization: Bearer ' + key + '" \\',
+                        '  -H "Content-Type: application/json" \\',
+                        "  -d '{\"external_user_id\":\"setup-test-user\",\"plan_sku\":\"" + this.verifyPlanSku + "\"}'",
+                    ].join('\n');
+                }
+            },
+            async mounted() {
+                try {
+                    const [statusRes, plansRes] = await Promise.all([
+                        fetch('setup/status'),
+                        fetch('setup/plans').catch(() => null),
+                    ]);
+                    this.status = await statusRes.json();
+                    this.databaseReady = !!this.status.databaseReady;
+                    if (this.status.dbSchema) {
+                        this.dbSchema = this.status.dbSchema;
+                    }
+                    if (plansRes?.ok) {
+                        const plansData = await plansRes.json();
+                        if (Array.isArray(plansData.plans) && plansData.plans.length) {
+                            this.plans = plansData.plans;
+                            this.verifyPlanSku = plansData.plans.find(p => p.highlighted)?.sku || plansData.plans[0].sku;
+                        }
+                    }
+                    if (this.databaseReady && !this.status.isSetupRequired) {
+                        window.location.href = 'admin';
+                        return;
+                    }
+                    if (this.databaseReady && this.step === 'welcome') {
+                        this.step = 'config';
+                    }
+                } catch (e) {
+                    console.warn('setup status', e);
+                }
+            },
+            methods: {
+                goAdmin() {
+                    window.location.href = 'admin';
+                },
+                async saveDatabase() {
+                    this.loading = true;
+                    this.error = null;
+                    try {
+                        const res = await fetch('setup/database', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                databaseUrl: this.databaseUrl.trim(),
+                                dbSchema: this.dbSchema.trim() || undefined,
+                            })
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Database connection failed');
+                        this.databaseReady = true;
+                        this.step = 'config';
+                    } catch (e) {
+                        this.error = e.message;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                async submit() {
+                    this.loading = true;
+                    this.error = null;
+                    try {
+                        const res = await fetch('setup/init', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.form)
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Setup failed');
+                        this.apiKey = data.apiKey;
+                        this.step = 'success';
+                    } catch (e) {
+                        this.error = e.message;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                async runVerify() {
+                    this.verifyLoading = true;
+                    this.verifyError = null;
+                    this.verifyResult = null;
+                    try {
+                        const res = await fetch('v1/users/provision', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': 'Bearer ' + this.apiKey,
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                external_user_id: 'setup-test-' + Date.now(),
+                                plan_sku: this.verifyPlanSku,
+                            }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Provision failed (HTTP ' + res.status + ')');
+                        this.verifyResult = JSON.stringify({
+                            aisplinter_user_id: data.aisplinter_user_id,
+                            plan_sku: data.plan_sku || this.verifyPlanSku,
+                            has_session_token: !!data.session_token,
+                            has_provider_key: !!data.provider_api_key,
+                        }, null, 2);
+                    } catch (e) {
+                        this.verifyError = e.message;
+                    } finally {
+                        this.verifyLoading = false;
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

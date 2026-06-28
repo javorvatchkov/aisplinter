@@ -1,0 +1,39 @@
+# AISplinter
+
+Neutral open-source middleware between your application and LLM providers.
+
+## Developer setup
+- **Full guide:** docs/DEV_SETUP.md
+- **Server env:** packages/server/.env.example (DATABASE_URL, AISPLINTER_OPENROUTER_KEY, AISPLINTER_DEV_KEY)
+- **Client env:** packages/core/.env.example (AISPLINTER_BASE_URL, AISPLINTER_DEV_KEY)
+
+## Architecture
+- **Server library:** `@aisplinter/server` (Hono, mountable)
+- **Standalone runner:** `apps/server` (optional `:8747` dev server)
+- **DB:** Postgres (ledger-based); tables `aisplinter_*`; optional `AISPLINTER_DB_SCHEMA`
+- **Auth:** Stateless JWT session tokens (~1h)
+
+## Directory Map
+- `packages/server`: Mountable API (`createAisplinterApp`, `startStandaloneServer`, `@aisplinter/server/next`)
+- `apps/server`: Standalone dev runner
+- `apps/demo-next`: Next.js embed example
+- `packages/core`: TS Client SDK + env helpers
+- `packages/react`, `packages/svelte`: UI components
+- `docs/DATABASE.md`: Postgres patterns (separate DB / schema / public), Neon OAuth, CLI setup
+
+## Core Flows
+- **Onboarding:** Setup wizard at `/` — welcome → database → upstream → dev key → connect app → verify provision
+- **Env bootstrap:** Complete server `.env` auto-creates project on first request (no wizard)
+- **Proxy:** Reserve → Stream → Reconcile ledger for budget enforcement
+- **Provisioning:** `POST /v1/users/provision` with dev key → session token + scoped provider key
+
+## Embedding
+```typescript
+import { createAisplinterApp } from '@aisplinter/server';
+const { app } = await createAisplinterApp({ basePath: '/api/aisplinter' });
+// app.fetch(request) in Next.js, Cloudflare Workers, etc.
+```
+
+## Compliance
+- MIT License for client `packages/`
+- AGPL-3.0 License for `@aisplinter/server` and standalone runner

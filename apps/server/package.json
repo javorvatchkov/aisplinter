@@ -1,0 +1,25 @@
+{
+  "name": "@aisplinter/server-standalone",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @aisplinter/server build && tsc -p tsconfig.json && node dist/index.js",
+    "dev:watch": "pnpm --filter @aisplinter/server dev",
+    "build": "tsc -p tsconfig.json",
+    "start": "pnpm --filter @aisplinter/server build && tsc -p tsconfig.json && node dist/index.js",
+    "db:generate": "pnpm --filter @aisplinter/server db:generate",
+    "db:push": "pnpm --filter @aisplinter/server db:push",
+    "db:studio": "pnpm --filter @aisplinter/server db:studio",
+    "setup": "pnpm --filter @aisplinter/server build && pnpm --filter @aisplinter/server setup"
+  },
+  "dependencies": {
+    "@aisplinter/server": "workspace:*",
+    "@hono/node-server": "^1.11.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "typescript": "^5.4.5"
+  }
+}

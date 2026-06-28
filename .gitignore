@@ -1,0 +1,9 @@
+node_modules/
+.turbo/
+**/*.tsbuildinfo
+**/dist/
+.env
+.env.*
+!.env.example
+**/.aisplinter-data/
+.DS_Store

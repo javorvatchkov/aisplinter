@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AISplinter | Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>[v-cloak] { display: none; }
+    .user-row-selected { background: rgba(16, 185, 129, 0.08); }
+    .detail-pane { box-shadow: -8px 0 32px rgba(0,0,0,0.45); }
+    .info-tip { position: relative; display: inline-flex; align-items: center; flex-shrink: 0; }
+    .info-tip-btn {
+        width: 1rem;
+        height: 1rem;
+        border-radius: 9999px;
+        border: 1px solid rgb(100 116 139);
+        font-size: 0.65rem;
+        font-weight: 700;
+        font-style: italic;
+        line-height: 1;
+        color: rgb(148 163 184);
+        background: rgb(15 23 42);
+        cursor: help;
+    }
+    .info-tip-btn:hover,
+    .info-tip-btn:focus-visible {
+        color: rgb(226 232 240);
+        border-color: rgb(148 163 184);
+        outline: none;
+    }
+    .info-tip-panel {
+        position: absolute;
+        left: 50%;
+        bottom: calc(100% + 8px);
+        transform: translateX(-50%);
+        width: max-content;
+        max-width: 18rem;
+        padding: 0.55rem 0.7rem;
+        border-radius: 0.5rem;
+        background: rgb(15 23 42);
+        border: 1px solid rgb(51 65 85);
+        font-size: 0.7rem;
+        font-weight: 400;
+        font-style: normal;
+        line-height: 1.45;
+        color: rgb(203 213 225);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.15s ease, visibility 0.15s ease;
+        z-index: 60;
+        pointer-events: none;
+        text-transform: none;
+        letter-spacing: normal;
+    }
+    .info-tip:hover .info-tip-panel,
+    .info-tip:focus-within .info-tip-panel {
+        opacity: 1;
+        visibility: visible;
+    }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen py-8 px-4">
+    <div id="app" v-cloak class="max-w-5xl mx-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+            <header class="border-b border-slate-800 px-6 py-5 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-emerald-700/30 border border-emerald-600/40 rounded-xl flex items-center justify-center text-emerald-400 font-bold text-sm">AS</div>
+                    <div>
+                        <h1 class="text-lg font-bold">AISplinter Admin</h1>
+                        <p class="text-xs text-slate-500">Developer console — upstream, users &amp; key minting</p>
+                    </div>
+                </div>
+                <nav v-if="!needsSecret && project" class="flex flex-wrap gap-1 text-xs font-bold uppercase tracking-wider">
+                    <button v-for="tab in tabs" :key="tab.id" @click="page = tab.id"
+                        :class="page === tab.id ? 'bg-emerald-700/30 text-emerald-300 border-emerald-700/50' : 'text-slate-400 border-transparent hover:text-slate-200'"
+                        class="rounded-lg border px-3 py-2 transition">{{ tab.label }}</button>
+                </nav>
+            </header>
+
+            <div class="p-6">
+                <div v-if="needsSecret" class="space-y-3 max-w-md">
+                    <p class="text-sm text-slate-400">Enter <code class="text-emerald-400">AISPLINTER_ADMIN_SECRET</code> from server <code class="text-slate-500">.env</code>.</p>
+                    <input v-model="adminSecret" type="password" placeholder="Admin secret" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-mono outline-none focus:border-emerald-600/50" />
+                    <button @click="loadAll" class="w-full rounded-lg bg-emerald-700 hover:bg-emerald-600 py-2.5 text-sm font-semibold">Unlock</button>
+                </div>
+
+                <div v-if="error" class="mb-4 rounded-lg bg-red-950/50 border border-red-800/50 text-red-300 px-4 py-3 text-sm">{{ error }}</div>
+                <div v-if="success" class="mb-4 rounded-lg bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 px-4 py-3 text-sm">{{ success }}</div>
+                <div v-if="loading" class="text-sm text-slate-500 text-center py-12">Loading…</div>
+
+                <template v-else-if="!needsSecret && project">
+                    <!-- OVERVIEW -->
+                    <div v-show="page === 'overview'" class="space-y-8">
+                        <div class="flex flex-wrap items-baseline justify-between gap-2">
+                            <p class="text-sm font-medium text-slate-300">{{ project.name }}</p>
+                            <p v-if="overviewStats?.createdAt" class="text-xs text-slate-500">Since {{ formatDate(overviewStats.createdAt) }}</p>
+                        </div>
+
+                        <section>
+                            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">Egocentric Basic AI</h2>
+                            <div v-if="businessNeedsLogin" class="rounded-xl border border-amber-900/40 bg-amber-950/20 px-4 py-3 text-xs text-amber-200/90 mb-3">
+                                Sign in with <code class="text-amber-100">@egocentric.me</code> in this browser for subscription counts.
+                                <a :href="staffLoginUrl" class="ml-1 text-emerald-400 underline">Sign in</a>
+                            </div>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                                <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                                    <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">Basic AI users</p>
+                                    <p class="text-2xl font-bold text-white mt-1">{{ businessStats?.totalBasicAiUsers ?? summary.totalUsers }}</p>
+                                    <p class="text-[0.65rem] text-slate-600 mt-1">Neon entitlements</p>
+                                </div>
+                                <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                                    <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">Active subscriptions</p>
+                                    <p class="text-2xl font-bold text-emerald-400 mt-1">{{ businessStats?.activeSubscriptions ?? '—' }}</p>
+                                    <p class="text-[0.65rem] text-slate-600 mt-1">Lemon Squeezy</p>
+                                </div>
+                                <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                                    <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">Admin granted</p>
+                                    <p class="text-2xl font-bold text-slate-200 mt-1">{{ businessStats?.adminGranted ?? '—' }}</p>
+                                    <p class="text-[0.65rem] text-slate-600 mt-1">No LS subscription</p>
+                                </div>
+                                <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                                    <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">Completed checkouts</p>
+                                    <p class="text-2xl font-bold text-white mt-1">{{ businessStats?.completedOrders ?? '—' }}</p>
+                                    <p v-if="businessStats?.estimatedRetailCollectedCents" class="text-[0.65rem] text-slate-600 mt-1">~{{ formatCents(businessStats.estimatedRetailCollectedCents) }} retail (est.)</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section>
+                            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">AISplinter (per-user keys)</h2>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                                    <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">End users</p>
+                                    <p class="text-2xl font-bold text-white mt-1">{{ overviewStats?.aisplinter.totalUsers ?? summary.totalUsers }}</p>
+                                </div>
+                                <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                                    <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">Keys minted</p>
+                                    <p class="text-2xl font-bold text-emerald-400 mt-1">{{ overviewStats?.aisplinter.provisionedKeys ?? summary.provisionedKeys }}</p>
+                                </div>
+                                <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                                    <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">Budget allocated</p>
+                                    <p class="text-2xl font-bold text-white mt-1">${{ (overviewStats?.aisplinter.budgetAllocatedUsd ?? summary.totalBudgetUsd).toFixed(2) }}</p>
+                                </div>
+                                <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                                    <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">Budget remaining</p>
+                                    <p class="text-2xl font-bold text-sky-400 mt-1">${{ (overviewStats?.aisplinter.budgetRemainingUsd ?? summary.totalRemainingUsd).toFixed(2) }}</p>
+                                </div>
+                                <div v-if="overviewStats?.aisplinter.resellerMarginPercent > 0" class="rounded-xl border border-emerald-900/40 bg-emerald-950/20 p-4">
+                                    <p class="text-[0.65rem] uppercase tracking-wider text-emerald-600">Reseller profit (tracked)</p>
+                                    <p class="text-2xl font-bold text-emerald-400 mt-1">${{ (overviewStats?.aisplinter.resellerProfitUsd ?? 0).toFixed(2) }}</p>
+                                    <p class="text-[0.65rem] text-slate-600 mt-1">{{ overviewStats?.aisplinter.resellerMarginPercent }}% margin on provisions &amp; top-ups</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section>
+                            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">OpenRouter account (management key)</h2>
+                            <p class="text-xs text-slate-500 mb-3">Prepaid credits on your OpenRouter wallet — separate from per-user $5 budgets.</p>
+                            <div v-if="overviewStats?.openRouter" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                                    <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">Purchased</p>
+                                    <p class="text-2xl font-bold text-white mt-1">${{ overviewStats.openRouter.totalPurchasedUsd.toFixed(2) }}</p>
+                                </div>
+                                <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                                    <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">Used</p>
+                                    <p class="text-2xl font-bold text-amber-300 mt-1">${{ overviewStats.openRouter.totalUsedUsd.toFixed(2) }}</p>
+                                </div>
+                                <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                                    <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">Remaining</p>
+                                    <p class="text-2xl font-bold text-emerald-400 mt-1">${{ overviewStats.openRouter.remainingUsd.toFixed(2) }}</p>
+                                </div>
+                            </div>
+                            <div v-else class="rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-3 text-xs text-slate-400">
+                                <span v-if="overviewStats?.openRouterError">{{ overviewStats.openRouterError }}</span>
+                                <span v-else>Configure OpenRouter in <button type="button" @click="page = 'settings'" class="text-emerald-400 underline">Settings</button>.</span>
+                            </div>
+                        </section>
+
+                        <p class="text-xs text-slate-600 border-t border-slate-800 pt-4">
+                            <strong class="text-slate-500">Key minting</strong> controls which plan SKUs your app can provision and whether keys are auto-minted on first connect — see that tab for <code class="text-slate-400">egocentric_basic_ai</code>.
+                        </p>
+                    </div>
+
+                    <!-- SETTINGS -->
+                    <div v-show="page === 'settings'" class="space-y-8 max-w-2xl">
+                        <p class="text-sm font-medium text-slate-300">{{ project.name }}</p>
+
+                        <section>
+                            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">Upstream AI provider</h2>
+                            <p v-if="project.upstreamReady" class="text-xs text-emerald-500 mb-3">✓ Provider configured</p>
+                            <p v-else class="text-xs text-amber-400 mb-3">⚠ Connect OpenRouter or LiteLLM so end users can use AI</p>
+                            <div class="space-y-3 rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                                <select v-model="upstreamForm.upstreamAdapter" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
+                                    <option value="openrouter">OpenRouter — routes to OpenAI, Anthropic, etc.</option>
+                                    <option value="litellm">LiteLLM — your keys on-prem</option>
+                                </select>
+                                <template v-if="upstreamForm.upstreamAdapter === 'openrouter'">
+                                    <p class="text-[0.7rem] text-slate-500">Management key from <a href="https://openrouter.ai/keys" target="_blank" rel="noopener" class="text-emerald-500 underline">openrouter.ai/keys</a></p>
+                                    <input v-model="upstreamForm.openrouterKey" type="password" :placeholder="project.openrouterKey.configured ? 'Leave blank to keep ' + project.openrouterKey.masked : 'sk-or-v1-…'" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-mono" />
+                                </template>
+                                <template v-if="upstreamForm.upstreamAdapter === 'litellm'">
+                                    <input v-model="upstreamForm.litellmBaseUrl" placeholder="LiteLLM base URL" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" />
+                                    <input v-model="upstreamForm.litellmKey" type="password" :placeholder="project.litellmKey.configured ? 'Leave blank to keep ' + project.litellmKey.masked : 'Master key'" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-mono" />
+                                </template>
+                                <div class="flex gap-2 pt-1">
+                                    <button @click="saveUpstream" :disabled="savingUpstream" class="flex-1 rounded-lg bg-emerald-700 hover:bg-emerald-600 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-40">{{ savingUpstream ? 'Saving…' : 'Save provider' }}</button>
+                                    <button @click="testUpstream" :disabled="testingUpstream" class="flex-1 rounded-lg border border-slate-600 hover:bg-slate-800 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-40">{{ testingUpstream ? 'Testing…' : 'Test' }}</button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section>
+                            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">Developer API key</h2>
+                            <div class="bg-slate-950 border border-slate-800 rounded-lg p-4 font-mono text-xs break-all select-all mb-2">{{ project.apiKey }}</div>
+                            <p v-if="project.envDevKeyMatches" class="text-xs text-emerald-500 mb-3">✓ Matches <code>AISPLINTER_DEV_KEY</code></p>
+                            <p v-else class="text-xs text-amber-400 mb-3">Copy into <code>AISPLINTER_DEV_KEY</code> in <code>apps/web/.env</code></p>
+                            <div class="flex gap-2">
+                                <button @click="copyKey" class="flex-1 rounded-lg border border-slate-700 hover:bg-slate-800 py-2.5 text-xs font-bold uppercase tracking-wider">{{ copied ? 'Copied' : 'Copy key' }}</button>
+                                <button @click="regenerate" :disabled="regenerating" class="flex-1 rounded-lg border border-amber-800/50 text-amber-300 hover:bg-amber-950/40 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-40">{{ regenerating ? '…' : 'Regenerate' }}</button>
+                            </div>
+                        </section>
+
+                        <dl class="grid grid-cols-2 gap-2 text-xs text-slate-500 border-t border-slate-800 pt-4">
+                            <dt>Project created</dt><dd class="text-slate-400">{{ formatDate(project.createdAt) }}</dd>
+                        </dl>
+                    </div>
+
+                    <!-- USERS -->
+                    <div v-show="page === 'users'" class="relative">
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                            <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                                <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">Total users</p>
+                                <p class="text-2xl font-bold text-white mt-1">{{ summary.totalUsers }}</p>
+                            </div>
+                            <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                                <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">Keys minted</p>
+                                <p class="text-2xl font-bold text-emerald-400 mt-1">{{ summary.provisionedKeys }}</p>
+                            </div>
+                            <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                                <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">Budget allocated</p>
+                                <p class="text-2xl font-bold text-white mt-1">${{ summary.totalBudgetUsd.toFixed(2) }}</p>
+                            </div>
+                            <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                                <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">Remaining</p>
+                                <p class="text-2xl font-bold text-sky-400 mt-1">${{ summary.totalRemainingUsd.toFixed(2) }}</p>
+                            </div>
+                        </div>
+
+                        <p class="text-xs text-slate-500 mb-4">Budget and spend sync from OpenRouter (active key). Each Egocentric user should have <strong class="text-slate-400">one active</strong> scoped key; older keys are retired re-provisions. If OpenRouter shows many unused <code class="text-slate-400">aisplinter-…</code> keys, the desktop may still be using an older key — match the <strong class="text-slate-400">Key</strong> column suffix here to OpenRouter search.</p>
+
+                        <div v-if="users.length === 0" class="text-center py-12 text-slate-500 text-sm">No users yet. They appear when someone enables AI in your app.</div>
+
+                        <div v-else class="overflow-x-auto rounded-xl border border-slate-800">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-950/80 text-[0.65rem] uppercase tracking-wider text-slate-500">
+                                    <tr>
+                                        <th class="px-4 py-3">Email</th>
+                                        <th class="px-4 py-3">User ID</th>
+                                        <th class="px-4 py-3">Plan</th>
+                                        <th class="px-4 py-3">Budget</th>
+                                        <th class="px-4 py-3">Spent (cycle)</th>
+                                        <th class="px-4 py-3">Key</th>
+                                        <th class="px-4 py-3">Joined</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-800">
+                                    <tr v-for="u in users" :key="u.id"
+                                        @click="openUserDetail(u)"
+                                        class="hover:bg-slate-950/40 cursor-pointer transition"
+                                        :class="selectedExternalId === u.externalUserId ? 'user-row-selected' : ''">
+                                        <td class="px-4 py-3 text-slate-200 max-w-[14rem]">
+                                            <span v-if="u.email" class="block truncate" :title="u.email">{{ u.email }}</span>
+                                            <span v-else-if="userEmailsNeedsLogin" class="text-xs text-slate-500 italic">Sign in for email</span>
+                                            <span v-else class="text-xs text-slate-600">—</span>
+                                            <span v-if="u.name" class="block text-[0.65rem] text-slate-500 truncate" :title="u.name">{{ u.name }}</span>
+                                        </td>
+                                        <td class="px-4 py-3 font-mono text-xs text-slate-500 max-w-[10rem] truncate" :title="u.externalUserId">{{ u.externalUserId }}</td>
+                                        <td class="px-4 py-3"><span class="rounded bg-slate-800 px-2 py-0.5 text-xs">{{ u.planSku || '—' }}</span></td>
+                                        <td class="px-4 py-3 text-xs text-slate-400">
+                                            <span v-if="u.budgetUsdRemaining != null">${{ u.budgetUsdRemaining.toFixed(2) }}</span>
+                                            <span v-if="u.budgetUsdTotal != null" class="text-slate-600"> / ${{ u.budgetUsdTotal.toFixed(2) }}</span>
+                                        </td>
+                                        <td class="px-4 py-3 text-xs whitespace-nowrap" :class="(u.usageUsdCycle || 0) > 0 ? 'text-amber-300' : 'text-slate-500'">
+                                            ${{ (u.usageUsdCycle || 0).toFixed(4) }}
+                                            <span v-if="u.upstreamKeyCount > 1" class="text-[0.6rem] text-slate-500 block">{{ u.upstreamKeyCount }} keys</span>
+                                            <span v-else-if="u.usageSource === 'openrouter'" class="text-[0.6rem] text-slate-600 block">OpenRouter</span>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <span v-if="u.hasUpstreamKey" class="text-xs text-emerald-500 font-mono">{{ u.upstreamKeyMasked }}</span>
+                                            <span v-if="u.upstreamKeyCount > 1" class="text-[0.6rem] text-slate-500 block">+{{ u.upstreamKeyCount - 1 }} older</span>
+                                            <span v-else-if="!u.hasUpstreamKey" class="text-xs text-amber-400">Pending</span>
+                                        </td>
+                                        <td class="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{{ formatDate(u.createdAt) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Side pane -->
+                        <div v-if="selectedExternalId" class="fixed inset-0 z-40 flex justify-end" @click.self="closeUserDetail">
+                            <div class="absolute inset-0 bg-black/50" @click="closeUserDetail"></div>
+                            <aside class="detail-pane relative z-50 w-full max-w-md h-full bg-slate-900 border-l border-slate-800 overflow-y-auto">
+                                <div class="sticky top-0 flex items-center justify-between gap-3 border-b border-slate-800 bg-slate-900/95 px-5 py-4 backdrop-blur">
+                                    <h3 class="text-sm font-bold text-white">User details</h3>
+                                    <button type="button" @click="closeUserDetail" class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-400 hover:text-white">Close</button>
+                                </div>
+
+                                <div v-if="detailLoading && !selectedAisplinterUser" class="p-6 text-sm text-slate-500">Loading…</div>
+                                <div v-else class="p-5 space-y-6 text-sm">
+                                    <section v-if="selectedAisplinterUser">
+                                        <h4 class="text-[0.65rem] font-bold uppercase tracking-wider text-slate-500 mb-2">AISplinter</h4>
+                                        <dl class="space-y-2 text-xs">
+                                            <div v-if="selectedAisplinterUser.email"><dt class="text-slate-500">Email</dt><dd class="text-slate-200 break-all">{{ selectedAisplinterUser.email }}</dd></div>
+                                            <div v-if="selectedAisplinterUser.name"><dt class="text-slate-500">Name</dt><dd class="text-slate-200">{{ selectedAisplinterUser.name }}</dd></div>
+                                            <div><dt class="text-slate-500">External ID</dt><dd class="font-mono text-slate-300 break-all">{{ selectedAisplinterUser.externalUserId }}</dd></div>
+                                            <div><dt class="text-slate-500">Plan</dt><dd class="text-slate-300">{{ selectedAisplinterUser.planSku || '—' }}</dd></div>
+                                            <div><dt class="text-slate-500">Budget</dt><dd class="text-slate-300">
+                                                <template v-if="selectedAisplinterUser.budgetUsdRemaining != null">${{ selectedAisplinterUser.budgetUsdRemaining.toFixed(2) }} left</template>
+                                                <template v-else>—</template>
+                                                <template v-if="selectedAisplinterUser.budgetUsdTotal != null"> · ${{ selectedAisplinterUser.budgetUsdTotal.toFixed(2) }} total</template>
+                                            </dd></div>
+                                            <div><dt class="text-slate-500">Key</dt><dd class="font-mono text-slate-300">{{ selectedAisplinterUser.hasUpstreamKey ? (selectedAisplinterUser.upstreamKeyMasked || 'minted') : 'Pending' }}</dd></div>
+                                            <div><dt class="text-slate-500">Spent (cycle)</dt><dd class="text-amber-300">${{ (selectedAisplinterUser.usageUsdCycle || 0).toFixed(4) }}</dd></div>
+                                            <div><dt class="text-slate-500">Spent (all time)</dt><dd class="text-slate-300">${{ (selectedAisplinterUser.usageUsdTotal || 0).toFixed(4) }}</dd></div>
+                                            <div v-if="selectedAisplinterUser.usageSource"><dt class="text-slate-500">Usage source</dt><dd class="text-slate-400">{{ selectedAisplinterUser.usageSource === 'openrouter' ? 'OpenRouter (client-direct)' : selectedAisplinterUser.usageSource === 'proxy' ? 'AISplinter proxy' : '—' }}</dd></div>
+                                            <div><dt class="text-slate-500">Joined</dt><dd class="text-slate-400">{{ formatDate(selectedAisplinterUser.createdAt) }}</dd></div>
+                                        </dl>
+                                        <div v-if="selectedAisplinterUser.upstreamKeys && selectedAisplinterUser.upstreamKeys.length" class="mt-4">
+                                            <h5 class="text-[0.65rem] font-bold uppercase tracking-wider text-slate-500 mb-2">OpenRouter keys</h5>
+                                            <p class="text-[0.65rem] text-slate-600 mb-2">Spend above is combined across all keys. Budget uses the active key only.</p>
+                                            <ul class="space-y-2">
+                                                <li v-for="k in selectedAisplinterUser.upstreamKeys" :key="k.hash" class="rounded-lg border px-3 py-2" :class="k.isActive ? 'border-emerald-800/60 bg-emerald-950/20' : 'border-slate-800 bg-slate-950/40'">
+                                                    <div class="flex flex-wrap items-center gap-2">
+                                                        <span class="font-mono text-xs text-slate-300">{{ k.label || k.hash.slice(0, 12) + '…' }}</span>
+                                                        <span v-if="k.isActive" class="rounded bg-emerald-900/50 px-1.5 py-0.5 text-[0.6rem] font-bold uppercase text-emerald-300">Active</span>
+                                                        <span v-else-if="k.isRetired" class="rounded bg-slate-800 px-1.5 py-0.5 text-[0.6rem] font-bold uppercase text-slate-400">Retired</span>
+                                                        <span v-if="k.disabled" class="rounded bg-red-950/50 px-1.5 py-0.5 text-[0.6rem] text-red-300">Disabled</span>
+                                                    </div>
+                                                    <p class="text-[0.65rem] text-slate-500 mt-1">
+                                                        Spent ${{ k.usageUsdCycle.toFixed(4) }} this cycle · ${{ k.usageUsdTotal.toFixed(4) }} all time
+                                                        <template v-if="k.limitRemainingUsd != null"> · ${{ k.limitRemainingUsd.toFixed(2) }} left</template>
+                                                    </p>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </section>
+
+                                    <div v-if="detailLoading" class="rounded-lg border border-slate-800 bg-slate-950/40 px-4 py-3 text-xs text-slate-500">Loading Egocentric billing…</div>
+                                    <div v-else-if="detailError" class="rounded-lg border border-red-900/50 bg-red-950/20 px-4 py-3 space-y-3">
+                                        <p class="text-sm text-red-400">{{ detailError }}</p>
+                                        <a v-if="detailNeedsLogin" :href="staffLoginUrl" class="text-xs text-emerald-400 underline">Sign in to egocentric.me as staff</a>
+                                        <p v-else class="text-[0.65rem] text-slate-500">AISplinter data above is still valid. Billing sections need an @egocentric.me staff session.</p>
+                                    </div>
+                                    <template v-else-if="userDetail">
+                                    <section>
+                                        <h4 class="text-[0.65rem] font-bold uppercase tracking-wider text-slate-500 mb-2">Account</h4>
+                                        <dl class="space-y-2">
+                                            <div><dt class="text-xs text-slate-500">Email</dt><dd class="text-slate-200">{{ userDetail.user.email || '—' }}</dd></div>
+                                            <div v-if="userDetail.user.name"><dt class="text-xs text-slate-500">Name</dt><dd class="text-slate-200">{{ userDetail.user.name }}</dd></div>
+                                            <div><dt class="text-xs text-slate-500">User ID</dt><dd class="font-mono text-xs text-slate-400 break-all">{{ userDetail.user.id }}</dd></div>
+                                            <div v-if="userDetail.basicAi"><dt class="text-xs text-slate-500">Basic AI status</dt><dd :class="userDetail.basicAi.status === 'active' ? 'text-emerald-400' : 'text-slate-300'">{{ userDetail.basicAi.status }}</dd></div>
+                                        </dl>
+                                    </section>
+
+                                    <section>
+                                        <h4 class="text-[0.65rem] font-bold uppercase tracking-wider text-slate-500 mb-2">Lemon Squeezy</h4>
+                                        <dl class="space-y-2">
+                                            <div><dt class="text-xs text-slate-500">Subscription ID</dt><dd class="font-mono text-xs text-slate-300 break-all">{{ userDetail.lemonSqueezy.subscriptionId || '—' }}</dd></div>
+                                            <div><dt class="text-xs text-slate-500">Order ID</dt><dd class="font-mono text-xs text-slate-300 break-all">{{ userDetail.lemonSqueezy.orderIdentifier || '—' }}</dd></div>
+                                            <div><dt class="text-xs text-slate-500">Variant</dt><dd class="font-mono text-xs text-slate-300">{{ userDetail.lemonSqueezy.variantId || '—' }}</dd></div>
+                                            <div><dt class="text-xs text-slate-500">OpenRouter key hint</dt><dd class="font-mono text-xs text-slate-300">{{ userDetail.lemonSqueezy.openrouterKeyHint || '—' }}</dd></div>
+                                        </dl>
+                                    </section>
+
+                                    <section>
+                                        <h4 class="text-[0.65rem] font-bold uppercase tracking-wider text-slate-500 mb-2">Money</h4>
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <div class="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+                                                <p class="text-[0.6rem] uppercase text-slate-500">Retail / cycle</p>
+                                                <p class="text-lg font-bold text-white mt-1">
+                                                    <template v-if="userDetail.money.retailPerCycleCents != null">{{ formatCents(userDetail.money.retailPerCycleCents) }} {{ userDetail.money.retailCurrency || '' }}</template>
+                                                    <template v-else>—</template>
+                                                </p>
+                                            </div>
+                                            <div class="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+                                                <p class="text-[0.6rem] uppercase text-slate-500">Retail spent (est.)</p>
+                                                <p class="text-lg font-bold text-white mt-1">
+                                                    <template v-if="userDetail.money.retailSpentTotalCents != null">{{ formatCents(userDetail.money.retailSpentTotalCents) }}</template>
+                                                    <template v-else>—</template>
+                                                </p>
+                                            </div>
+                                            <div class="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+                                                <p class="text-[0.6rem] uppercase text-slate-500">AI spent (cycle)</p>
+                                                <p class="text-lg font-bold text-sky-400 mt-1">${{ userDetail.money.wholesaleSpentCycleUsd.toFixed(4) }}</p>
+                                                <p class="text-[0.6rem] text-slate-600">proxy ledger</p>
+                                            </div>
+                                            <div class="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+                                                <p class="text-[0.6rem] uppercase text-slate-500">AI budget left</p>
+                                                <p class="text-lg font-bold text-emerald-400 mt-1">
+                                                    <template v-if="userDetail.money.wholesaleLeftUsd != null">${{ userDetail.money.wholesaleLeftUsd.toFixed(2) }}</template>
+                                                    <template v-else>—</template>
+                                                </p>
+                                                <p class="text-[0.6rem] text-slate-600" v-if="userDetail.money.wholesaleBudgetTotalUsd != null">of ${{ userDetail.money.wholesaleBudgetTotalUsd.toFixed(2) }}</p>
+                                            </div>
+                                        </div>
+                                        <p class="text-[0.65rem] text-slate-600 mt-3">AI spend total (all time, proxy): ${{ userDetail.money.wholesaleSpentTotalUsd.toFixed(4) }}. Client-direct OpenRouter usage is enforced on the scoped key, not fully mirrored here.</p>
+                                    </section>
+
+                                    <section>
+                                        <h4 class="text-[0.65rem] font-bold uppercase tracking-wider text-slate-500 mb-2">AI purchases</h4>
+                                        <div v-if="!userDetail.purchases.length" class="text-xs text-slate-500">No Basic AI orders recorded in Neon.</div>
+                                        <ul v-else class="space-y-2">
+                                            <li v-for="p in userDetail.purchases" :key="p.orderIdentifier" class="rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2">
+                                                <p class="font-mono text-xs text-slate-300 break-all">{{ p.orderIdentifier }}</p>
+                                                <p class="text-[0.65rem] text-slate-500 mt-1">{{ p.status }} · {{ formatDate(p.createdAt) }}</p>
+                                            </li>
+                                        </ul>
+                                    </section>
+
+                                    <section>
+                                        <h4 class="text-[0.65rem] font-bold uppercase tracking-wider text-slate-500 mb-2">AISplinter (Neon sync)</h4>
+                                        <dl class="space-y-2 text-xs">
+                                            <div><dt class="text-slate-500">Plan</dt><dd class="text-slate-300">{{ userDetail.aisplinter.planSku || '—' }}</dd></div>
+                                            <div><dt class="text-slate-500">Active key</dt><dd class="font-mono text-slate-300">{{ userDetail.aisplinter.hasUpstreamKey ? (userDetail.aisplinter.upstreamKeyMasked || 'minted') : 'Pending' }}</dd></div>
+                                            <div><dt class="text-slate-500">Joined AISplinter</dt><dd class="text-slate-400">{{ userDetail.aisplinter.joinedAt ? formatDate(userDetail.aisplinter.joinedAt) : '—' }}</dd></div>
+                                        </dl>
+                                        <div v-if="userDetail.aisplinter.upstreamKeys && userDetail.aisplinter.upstreamKeys.length" class="mt-3 space-y-2">
+                                            <p class="text-[0.65rem] text-slate-600">OpenRouter keys (combined spend in Money section)</p>
+                                            <div v-for="k in userDetail.aisplinter.upstreamKeys" :key="k.hash" class="rounded border px-2 py-1.5 text-[0.65rem]" :class="k.isActive ? 'border-emerald-800/50 text-emerald-200' : 'border-slate-800 text-slate-400'">
+                                                {{ k.label || k.hash.slice(0, 10) + '…' }}
+                                                <span v-if="k.isActive"> · active</span>
+                                                <span v-else-if="k.isRetired"> · retired</span>
+                                                · ${{ k.usageUsdCycle.toFixed(4) }} cycle
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <section class="border-t border-slate-800 pt-4">
+                                        <button type="button"
+                                            :disabled="deletingUser"
+                                            @click="deleteUserDetail"
+                                            class="w-full rounded-lg border border-red-900/70 bg-red-950/30 py-2.5 text-xs font-bold uppercase tracking-wider text-red-300 hover:bg-red-950/50 disabled:opacity-40">
+                                            {{ deletingUser ? 'Deleting…' : 'Delete AI user' }}
+                                        </button>
+                                        <p class="text-[0.65rem] text-slate-600 mt-2">Removes AISplinter row, entitlement, and usage history. Keeps the Egocentric login account and Lemon Squeezy order records.</p>
+                                    </section>
+                                    </template>
+                                    <div v-else class="rounded-lg border border-slate-800 bg-slate-950/40 px-4 py-3 text-xs text-slate-500">
+                                        No Egocentric billing record linked to this user yet.
+                                    </div>
+                                </div>
+                            </aside>
+                        </div>
+                    </div>
+
+                    <!-- MINTING -->
+                    <div v-show="page === 'minting'" class="max-w-2xl space-y-6">
+                        <p class="text-sm text-slate-400">Control how per-user upstream keys are minted when someone subscribes to AI through your app.</p>
+
+                        <div class="rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-xs text-slate-400 space-y-2">
+                            <p class="font-semibold text-slate-300">Minting flow</p>
+                            <ol class="list-decimal list-inside space-y-1">
+                                <li>User picks a plan in your app (<code>@aisplinter/react</code> / <code>@aisplinter/svelte</code>)</li>
+                                <li>Your server calls <code>POST /v1/users/provision</code> with <code>plan_sku</code></li>
+                                <li>AISplinter creates a scoped key on <strong>{{ minting?.upstreamAdapter === 'litellm' ? 'LiteLLM' : 'OpenRouter' }}</strong></li>
+                                <li>User receives their own provider API key + session token</li>
+                            </ol>
+                        </div>
+
+                        <template v-if="minting">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs text-slate-500 mb-1">Reseller margin (% of purchase kept as profit)</label>
+                                    <div class="flex flex-wrap items-center gap-3">
+                                        <input v-model.number="mintingForm.resellerMarginPercent" type="range" min="0" max="99" step="1" class="flex-1 min-w-[8rem] accent-emerald-600" />
+                                        <input v-model.number="mintingForm.resellerMarginPercent" type="number" min="0" max="99" step="1" class="w-20 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-center font-mono" />
+                                        <span class="text-sm text-slate-400">%</span>
+                                    </div>
+                                    <p class="text-[0.7rem] text-slate-500 mt-2">
+                                        At {{ mintingForm.resellerMarginPercent }}% margin on a $5 plan, users receive
+                                        <strong class="text-slate-300">${{ marginPreviewUserBudget(5) }}</strong>
+                                        in tokens; you keep <strong class="text-emerald-400">${{ marginPreviewProfit(5) }}</strong>.
+                                        Set 0% to pass the full purchase amount through.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs text-slate-500 mb-1">Brand name (shown to users)</label>
+                                    <input v-model="mintingForm.brandName" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" placeholder="Egocentric" />
+                                </div>
+
+                                <div>
+                                    <div class="flex items-center justify-between gap-3 mb-2">
+                                        <label class="block text-xs text-slate-500">Plans</label>
+                                        <button type="button" @click="startNewPlan" class="text-xs font-bold uppercase tracking-wider text-emerald-400 hover:text-emerald-300">+ Add plan</button>
+                                    </div>
+
+                                    <div v-if="planEditor.mode" class="mb-4 rounded-xl border border-emerald-900/40 bg-slate-950/60 p-4 space-y-3">
+                                        <p class="text-xs font-semibold text-slate-300">{{ planEditor.mode === 'create' ? 'New plan' : 'Edit plan' }}</p>
+                                        <div class="grid gap-3 sm:grid-cols-2">
+                                            <div>
+                                                <label class="block text-[0.65rem] uppercase text-slate-500 mb-1">Display name</label>
+                                                <input v-model="planEditor.displayName" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" placeholder="AI Starter" />
+                                            </div>
+                                            <div>
+                                                <label class="block text-[0.65rem] uppercase text-slate-500 mb-1">SKU</label>
+                                                <input v-model="planEditor.sku" :disabled="planEditor.mode === 'edit'" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-mono disabled:opacity-50" placeholder="ai_starter" />
+                                            </div>
+                                            <div>
+                                                <label class="block text-[0.65rem] uppercase text-slate-500 mb-1">Monthly budget (USD)</label>
+                                                <input v-model.number="planEditor.budgetUsd" type="number" min="0.01" step="0.01" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" />
+                                                <p class="text-[0.65rem] text-slate-600 mt-1">Purchase amount — margin is applied when provisioning keys.</p>
+                                            </div>
+                                            <div>
+                                                <label class="block text-[0.65rem] uppercase text-slate-500 mb-1">Default model</label>
+                                                <input v-model="planEditor.defaultModel" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-mono" :placeholder="minting.upstreamAdapter === 'litellm' ? 'gpt-4o-mini' : 'openai/gpt-4o-mini'" />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[0.65rem] uppercase text-slate-500 mb-1">Providers (comma-separated)</label>
+                                            <input v-model="planEditor.providersText" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" placeholder="OpenAI, Anthropic" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-[0.65rem] uppercase text-slate-500 mb-1">Description</label>
+                                            <input v-model="planEditor.description" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" />
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <button type="button" @click="savePlan" :disabled="savingPlan" class="flex-1 rounded-lg bg-emerald-700 hover:bg-emerald-600 py-2 text-xs font-bold uppercase tracking-wider disabled:opacity-40">{{ savingPlan ? 'Saving…' : 'Save plan' }}</button>
+                                            <button type="button" @click="cancelPlanEditor" class="rounded-lg border border-slate-700 px-4 py-2 text-xs text-slate-400 hover:text-white">Cancel</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <div v-for="p in minting.availablePlans" :key="p.sku" class="rounded-lg border border-slate-800 p-3">
+                                            <div class="flex items-start gap-3">
+                                                <input type="checkbox" :value="p.sku" v-model="mintingForm.enabledPlanSkus" class="mt-1" />
+                                                <div class="flex-1 min-w-0">
+                                                    <div class="flex flex-wrap items-center gap-2">
+                                                        <p class="text-sm font-medium text-slate-200">{{ p.displayName }}</p>
+                                                        <code class="text-[0.65rem] text-slate-500">{{ p.sku }}</code>
+                                                    </div>
+                                                    <p class="text-xs text-slate-500 mt-0.5">${{ p.budgetUsd }} / {{ p.period }} · {{ p.providers.join(', ') }}</p>
+                                                    <p v-if="p.modelAliases?.default" class="text-[0.65rem] text-slate-600 mt-0.5 font-mono">{{ p.modelAliases.default }}</p>
+                                                </div>
+                                                <div class="flex gap-1 shrink-0">
+                                                    <button type="button" @click="startEditPlan(p)" class="rounded border border-slate-700 px-2 py-1 text-[0.65rem] text-slate-400 hover:text-white">Edit</button>
+                                                    <button type="button" @click="removePlan(p.sku)" :disabled="deletingPlanSku === p.sku" class="rounded border border-red-900/50 px-2 py-1 text-[0.65rem] text-red-400 hover:bg-red-950/30 disabled:opacity-40">Delete</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs text-slate-500 mb-1">Default plan</label>
+                                    <select v-model="mintingForm.defaultPlanSku" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
+                                        <option v-for="p in minting.availablePlans" :key="p.sku" :value="p.sku">{{ p.displayName }} (${{ p.budgetUsd }}/mo)</option>
+                                    </select>
+                                </div>
+
+                                <div class="flex items-center gap-2 text-sm text-slate-300">
+                                    <label class="flex items-center gap-2 flex-1 cursor-pointer">
+                                        <input type="checkbox" v-model="mintingForm.showProviderBranding" />
+                                        <span>Show upstream provider branding to users (recommended)</span>
+                                    </label>
+                                    <span class="info-tip">
+                                        <button type="button" class="info-tip-btn" aria-label="About provider branding" tabindex="0">i</button>
+                                        <span class="info-tip-panel" role="tooltip">
+                                            Shows OpenRouter or LiteLLM branding in embedded AISplinter UI (plan picker, key card) plus your provider disclosure text. Helps users see where requests are routed. Recommended for transparency.
+                                        </span>
+                                    </span>
+                                </div>
+
+                                <div class="flex items-center gap-2 text-sm text-slate-300">
+                                    <label class="flex items-center gap-2 flex-1 cursor-pointer">
+                                        <input type="checkbox" v-model="mintingForm.autoProvisionOnFirstConnect" />
+                                        <span>Auto-provision on first connect</span>
+                                    </label>
+                                    <span class="info-tip">
+                                        <button type="button" class="info-tip-btn" aria-label="About auto-provision" tabindex="0">i</button>
+                                        <span class="info-tip-panel" role="tooltip">
+                                            When a user first connects AI in your app, AISplinter mints their scoped upstream key automatically. Turn off if your backend should call <code class="text-emerald-400/90">POST /v1/users/provision</code> only after payment or other checks.
+                                        </span>
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs text-slate-500 mb-1">UI accent color (for embedded components)</label>
+                                    <div class="flex gap-2">
+                                        <input type="color" v-model="mintingForm.uiAccentColor" class="h-10 w-14 rounded border border-slate-700 bg-slate-950" />
+                                        <input v-model="mintingForm.uiAccentColor" class="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-mono" />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs text-slate-500 mb-1">Provider disclosure (shown in user UI)</label>
+                                    <textarea v-model="mintingForm.providerDisclosureText" rows="4" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-300"></textarea>
+                                </div>
+
+                                <button @click="saveMinting" :disabled="savingMinting" class="w-full rounded-lg bg-emerald-700 hover:bg-emerald-600 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-40">{{ savingMinting ? 'Saving…' : 'Save minting settings' }}</button>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <div v-else-if="!needsSecret && !loading" class="text-center py-6">
+                    <p class="text-slate-400 text-sm mb-4">No project yet.</p>
+                    <a :href="setupUrl" class="inline-block rounded-lg bg-emerald-700 hover:bg-emerald-600 px-5 py-2.5 text-sm font-semibold">Run setup wizard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        const base = window.location.pathname.replace(/\/admin\/?$/, '') || '';
+
+        createApp({
+            data() {
+                return {
+                    page: (location.hash || '#overview').slice(1) || 'overview',
+                    tabs: [
+                        { id: 'overview', label: 'Overview' },
+                        { id: 'users', label: 'Users' },
+                        { id: 'minting', label: 'Key minting' },
+                        { id: 'settings', label: 'Settings' },
+                    ],
+                    loading: true,
+                    error: null,
+                    success: null,
+                    project: null,
+                    users: [],
+                    summary: { totalUsers: 0, provisionedKeys: 0, totalBudgetUsd: 0, totalRemainingUsd: 0 },
+                    overviewStats: null,
+                    businessStats: null,
+                    businessNeedsLogin: false,
+                    minting: null,
+                    needsSecret: false,
+                    adminSecret: localStorage.getItem('aisplinter_admin_secret') || '',
+                    copied: false,
+                    regenerating: false,
+                    savingUpstream: false,
+                    testingUpstream: false,
+                    savingMinting: false,
+                    savingPlan: false,
+                    deletingPlanSku: null,
+                    planEditor: {
+                        mode: null,
+                        sku: '',
+                        displayName: '',
+                        description: '',
+                        budgetUsd: 5,
+                        defaultModel: '',
+                        providersText: 'OpenAI',
+                    },
+                    setupUrl: base + '/',
+                    upstreamForm: { upstreamAdapter: 'openrouter', openrouterKey: '', litellmKey: '', litellmBaseUrl: '' },
+                    mintingForm: {
+                        defaultPlanSku: 'ai_starter',
+                        enabledPlanSkus: [],
+                        resellerMarginPercent: 0,
+                        showProviderBranding: true,
+                        providerDisclosureText: '',
+                        autoProvisionOnFirstConnect: true,
+                        brandName: '',
+                        uiAccentColor: '#85AA85',
+                    },
+                    selectedExternalId: null,
+                    selectedAisplinterUser: null,
+                    userDetail: null,
+                    detailLoading: false,
+                    detailError: null,
+                    detailNeedsLogin: false,
+                    deletingUser: false,
+                    userEmailsNeedsLogin: false,
+                };
+            },
+            watch: {
+                page(v) { location.hash = v; },
+            },
+            computed: {
+                staffLoginUrl() {
+                    const callback = window.location.pathname + window.location.hash;
+                    return '/auth/login?callbackUrl=' + encodeURIComponent(callback);
+                },
+            },
+            async mounted() {
+                window.addEventListener('hashchange', () => {
+                    this.page = (location.hash || '#overview').slice(1) || 'overview';
+                });
+                await this.loadAll();
+            },
+            methods: {
+                authHeaders() {
+                    const h = { 'Content-Type': 'application/json' };
+                    if (this.adminSecret.trim()) h['Authorization'] = 'Bearer ' + this.adminSecret.trim();
+                    return h;
+                },
+                async enrichUsersWithEmails(userList) {
+                    const ids = (userList || [])
+                        .map((u) => u.externalUserId)
+                        .filter((id) => typeof id === 'string' && id.trim());
+                    if (!ids.length) return userList || [];
+
+                    try {
+                        const res = await fetch('/api/admin/basic-ai/user-directory', {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ externalIds: ids }),
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (res.status === 401 || res.status === 403) {
+                            this.userEmailsNeedsLogin = true;
+                            return (userList || []).map((u) => ({ ...u, email: null, name: null }));
+                        }
+                        if (!res.ok) return userList || [];
+                        this.userEmailsNeedsLogin = false;
+                        const accounts = data.accounts || {};
+                        return (userList || []).map((u) => {
+                            const account = accounts[u.externalUserId] || {};
+                            return {
+                                ...u,
+                                email: account.email || null,
+                                name: account.name || null,
+                            };
+                        });
+                    } catch {
+                        return userList || [];
+                    }
+                },
+                syncUpstreamForm() {
+                    if (!this.project) return;
+                    this.upstreamForm.upstreamAdapter = this.project.upstreamAdapter || 'openrouter';
+                    this.upstreamForm.openrouterKey = '';
+                    this.upstreamForm.litellmKey = '';
+                    this.upstreamForm.litellmBaseUrl = this.project.litellmBaseUrl || '';
+                },
+                syncMintingForm() {
+                    if (!this.minting) return;
+                    this.mintingForm = {
+                        defaultPlanSku: this.minting.defaultPlanSku,
+                        enabledPlanSkus: [...this.minting.enabledPlanSkus],
+                        resellerMarginPercent: this.minting.resellerMarginPercent ?? 0,
+                        showProviderBranding: this.minting.showProviderBranding,
+                        providerDisclosureText: this.minting.providerDisclosureText || '',
+                        autoProvisionOnFirstConnect: this.minting.autoProvisionOnFirstConnect,
+                        brandName: this.minting.brandName || '',
+                        uiAccentColor: this.minting.uiAccentColor || '#85AA85',
+                    };
+                },
+                marginPreviewUserBudget(grossUsd) {
+                    const margin = Math.min(99, Math.max(0, Math.round(Number(this.mintingForm.resellerMarginPercent) || 0)));
+                    return (Math.round(grossUsd * (100 - margin)) / 100).toFixed(2);
+                },
+                marginPreviewProfit(grossUsd) {
+                    const margin = Math.min(99, Math.max(0, Math.round(Number(this.mintingForm.resellerMarginPercent) || 0)));
+                    const user = Math.round(grossUsd * (100 - margin)) / 100;
+                    return (Math.round((grossUsd - user) * 100) / 100).toFixed(2);
+                },
+                async loadAll() {
+                    this.loading = true;
+                    this.error = null;
+                    try {
+                        const res = await fetch(base + '/admin/project', { headers: this.authHeaders() });
+                        const data = await res.json().catch(() => ({}));
+                        if (res.status === 401 || res.status === 503) {
+                            this.needsSecret = true;
+                            this.project = null;
+                            if (data.error) this.error = data.error;
+                            return;
+                        }
+                        if (!res.ok) throw new Error(data.error || 'Could not load');
+                        this.needsSecret = false;
+                        this.project = data.project;
+                        this.syncUpstreamForm();
+                        if (this.adminSecret.trim()) localStorage.setItem('aisplinter_admin_secret', this.adminSecret.trim());
+
+                        const [usersRes, mintRes, overviewRes, businessRes] = await Promise.all([
+                            fetch(base + '/admin/users', { headers: this.authHeaders() }),
+                            fetch(base + '/admin/project/minting', { headers: this.authHeaders() }),
+                            fetch(base + '/admin/overview', { headers: this.authHeaders() }),
+                            fetch('/api/admin/basic-ai/overview', { credentials: 'include' }),
+                        ]);
+                        const usersData = await usersRes.json();
+                        const mintData = await mintRes.json();
+                        const overviewData = await overviewRes.json().catch(() => ({}));
+                        const businessData = await businessRes.json().catch(() => ({}));
+                        if (usersRes.ok) {
+                            const rawUsers = usersData.users || [];
+                            this.users = await this.enrichUsersWithEmails(rawUsers);
+                            this.summary = usersData.summary || this.summary;
+                        }
+                        if (overviewRes.ok) {
+                            this.overviewStats = overviewData.overview || null;
+                        }
+                        if (businessRes.status === 401 || businessRes.status === 403) {
+                            this.businessNeedsLogin = true;
+                            this.businessStats = null;
+                        } else if (businessRes.ok) {
+                            this.businessNeedsLogin = false;
+                            this.businessStats = businessData.business || null;
+                        }
+                        if (mintRes.ok) {
+                            this.minting = mintData.minting;
+                            this.syncMintingForm();
+                        }
+                    } catch (e) {
+                        this.error = e.message;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                async saveUpstream() {
+                    if (!this.project) return;
+                    this.savingUpstream = true;
+                    this.error = null;
+                    this.success = null;
+                    try {
+                        const res = await fetch(base + '/admin/project/upstream', {
+                            method: 'PUT',
+                            headers: this.authHeaders(),
+                            body: JSON.stringify({
+                                upstreamAdapter: this.upstreamForm.upstreamAdapter,
+                                openrouterKey: this.upstreamForm.openrouterKey || undefined,
+                                litellmKey: this.upstreamForm.litellmKey || undefined,
+                                litellmBaseUrl: this.upstreamForm.litellmBaseUrl || undefined,
+                            }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Save failed');
+                        this.success = data.message || 'Provider saved';
+                        this.project = data.project;
+                        this.syncUpstreamForm();
+                        await this.refreshOverview();
+                    } catch (e) { this.error = e.message; }
+                    finally { this.savingUpstream = false; }
+                },
+                async testUpstream() {
+                    this.testingUpstream = true;
+                    this.error = null;
+                    this.success = null;
+                    try {
+                        const res = await fetch(base + '/admin/project/test-upstream', { method: 'POST', headers: this.authHeaders(), body: '{}' });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.message || data.error || 'Test failed');
+                        this.success = data.message;
+                    } catch (e) { this.error = e.message; }
+                    finally { this.testingUpstream = false; }
+                },
+                async saveMinting() {
+                    this.savingMinting = true;
+                    this.error = null;
+                    this.success = null;
+                    try {
+                        const res = await fetch(base + '/admin/project/minting', {
+                            method: 'PUT',
+                            headers: this.authHeaders(),
+                            body: JSON.stringify(this.mintingForm),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Save failed');
+                        this.success = data.message || 'Minting settings saved';
+                        this.minting = data.minting;
+                        this.syncMintingForm();
+                    } catch (e) { this.error = e.message; }
+                    finally { this.savingMinting = false; }
+                },
+                cancelPlanEditor() {
+                    this.planEditor = {
+                        mode: null,
+                        sku: '',
+                        displayName: '',
+                        description: '',
+                        budgetUsd: 5,
+                        defaultModel: '',
+                        providersText: 'OpenAI',
+                    };
+                },
+                startNewPlan() {
+                    this.planEditor = {
+                        mode: 'create',
+                        sku: '',
+                        displayName: '',
+                        description: '',
+                        budgetUsd: 5,
+                        defaultModel: '',
+                        providersText: 'OpenAI',
+                    };
+                },
+                startEditPlan(plan) {
+                    this.planEditor = {
+                        mode: 'edit',
+                        sku: plan.sku,
+                        displayName: plan.displayName,
+                        description: plan.description || '',
+                        budgetUsd: plan.budgetUsd,
+                        defaultModel: plan.modelAliases?.default || '',
+                        providersText: (plan.providers || []).join(', '),
+                    };
+                },
+                planPayloadFromEditor() {
+                    return {
+                        sku: this.planEditor.sku,
+                        displayName: this.planEditor.displayName,
+                        description: this.planEditor.description || undefined,
+                        budgetUsd: this.planEditor.budgetUsd,
+                        defaultModel: this.planEditor.defaultModel || undefined,
+                        providers: this.planEditor.providersText.split(',').map((s) => s.trim()).filter(Boolean),
+                    };
+                },
+                async savePlan() {
+                    this.savingPlan = true;
+                    this.error = null;
+                    this.success = null;
+                    try {
+                        const payload = this.planPayloadFromEditor();
+                        const isCreate = this.planEditor.mode === 'create';
+                        if (isCreate && !payload.sku && payload.displayName) {
+                            payload.sku = payload.displayName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+                        }
+                        const url = isCreate
+                            ? base + '/admin/project/plans'
+                            : base + '/admin/project/plans/' + encodeURIComponent(this.planEditor.sku);
+                        const res = await fetch(url, {
+                            method: isCreate ? 'POST' : 'PUT',
+                            headers: this.authHeaders(),
+                            body: JSON.stringify(payload),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Save failed');
+                        this.success = data.message || 'Plan saved';
+                        this.minting = data.minting;
+                        this.syncMintingForm();
+                        this.cancelPlanEditor();
+                    } catch (e) { this.error = e.message; }
+                    finally { this.savingPlan = false; }
+                },
+                async removePlan(sku) {
+                    if (!confirm('Delete plan ' + sku + '? Users on this plan block deletion.')) return;
+                    this.deletingPlanSku = sku;
+                    this.error = null;
+                    this.success = null;
+                    try {
+                        const res = await fetch(base + '/admin/project/plans/' + encodeURIComponent(sku), {
+                            method: 'DELETE',
+                            headers: this.authHeaders(),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Delete failed');
+                        this.success = data.message || 'Plan deleted';
+                        this.minting = data.minting;
+                        this.syncMintingForm();
+                        if (this.planEditor.sku === sku) this.cancelPlanEditor();
+                    } catch (e) { this.error = e.message; }
+                    finally { this.deletingPlanSku = null; }
+                },
+                async copyKey() {
+                    if (!this.project?.apiKey) return;
+                    await navigator.clipboard.writeText(this.project.apiKey);
+                    this.copied = true;
+                    setTimeout(() => { this.copied = false; }, 2000);
+                },
+                async regenerate() {
+                    if (!confirm('Regenerate developer API key? Update AISPLINTER_DEV_KEY everywhere.')) return;
+                    this.regenerating = true;
+                    this.error = null;
+                    try {
+                        const res = await fetch(base + '/admin/regenerate-key', { method: 'POST', headers: this.authHeaders(), body: '{}' });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Regenerate failed');
+                        this.project = data.project;
+                        this.success = data.message;
+                    } catch (e) { this.error = e.message; }
+                    finally { this.regenerating = false; }
+                },
+                formatDate(iso) {
+                    try { return new Date(iso).toLocaleString(); } catch { return iso; }
+                },
+                formatCents(cents) {
+                    return '$' + (cents / 100).toFixed(2);
+                },
+                async refreshOverview() {
+                    try {
+                        const [overviewRes, businessRes] = await Promise.all([
+                            fetch(base + '/admin/overview', { headers: this.authHeaders() }),
+                            fetch('/api/admin/basic-ai/overview', { credentials: 'include' }),
+                        ]);
+                        const overviewData = await overviewRes.json().catch(() => ({}));
+                        const businessData = await businessRes.json().catch(() => ({}));
+                        if (overviewRes.ok) this.overviewStats = overviewData.overview || null;
+                        if (businessRes.status === 401 || businessRes.status === 403) {
+                            this.businessNeedsLogin = true;
+                            this.businessStats = null;
+                        } else if (businessRes.ok) {
+                            this.businessNeedsLogin = false;
+                            this.businessStats = businessData.business || null;
+                        }
+                    } catch { /* ignore */ }
+                },
+                closeUserDetail() {
+                    this.selectedExternalId = null;
+                    this.selectedAisplinterUser = null;
+                    this.userDetail = null;
+                    this.detailError = null;
+                    this.detailNeedsLogin = false;
+                },
+                async openUserDetail(user) {
+                    this.selectedExternalId = user.externalUserId;
+                    this.selectedAisplinterUser = user;
+                    this.detailLoading = true;
+                    this.detailError = null;
+                    this.detailNeedsLogin = false;
+                    this.userDetail = null;
+                    try {
+                        const res = await fetch('/api/admin/basic-ai/users/' + encodeURIComponent(user.externalUserId), {
+                            credentials: 'include',
+                        });
+                        const contentType = res.headers.get('content-type') || '';
+                        const data = contentType.includes('application/json')
+                            ? await res.json().catch(() => ({}))
+                            : {};
+                        if (res.status === 401 || res.status === 403) {
+                            this.detailNeedsLogin = true;
+                            throw new Error(data.error || 'Sign in to egocentric.me with an @egocentric.me account to view billing details.');
+                        }
+                        if (!res.ok) throw new Error(data.error || 'Could not load billing details.');
+                        if (!data.detail) {
+                            throw new Error(data.error || 'Billing details not available for this user.');
+                        }
+                        this.userDetail = data.detail;
+                    } catch (e) {
+                        this.detailError = e.message;
+                    } finally {
+                        this.detailLoading = false;
+                    }
+                },
+                async deleteUserDetail() {
+                    if (!this.selectedExternalId) return;
+                    const email = this.userDetail?.user?.email || this.selectedExternalId;
+                    if (!confirm('Delete Basic AI for ' + email + '? Revokes OpenRouter keys, removes AISplinter user and entitlement. Egocentric account is kept.')) return;
+                    this.deletingUser = true;
+                    this.detailError = null;
+                    try {
+                        const res = await fetch('/api/admin/basic-ai/users/' + encodeURIComponent(this.selectedExternalId), {
+                            method: 'DELETE',
+                            credentials: 'include',
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (res.status === 401) {
+                            this.detailNeedsLogin = true;
+                            throw new Error(data.error || 'Sign in required.');
+                        }
+                        if (!res.ok) throw new Error(data.error || 'Delete failed.');
+                        this.success = data.message || 'User deleted.';
+                        this.closeUserDetail();
+                        await this.loadAll();
+                    } catch (e) {
+                        this.detailError = e.message;
+                    } finally {
+                        this.deletingUser = false;
+                    }
+                },
+            },
+        }).mount('#app');
+    </script>
+</body>
+</html>

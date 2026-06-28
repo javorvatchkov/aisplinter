@@ -1,0 +1,13 @@
+# AISplinter License
+
+AISplinter is an open-source project with a dual-license model:
+
+### 1. SDKs, UI Components, and Utilities
+All files under the `packages/` directory are licensed under the **MIT License**. This allows developers to freely embed AISplinter tools into their own applications (commercial or otherwise) without restriction.
+
+### 2. Server, Adapters, and Core Infrastructure
+All files under the `apps/server/` and `adapters/` directories are licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. This ensures that the core middleware remains open and that improvements made by those hosting the service are shared back with the community.
+
+---
+
+For the full text of these licenses, please see the respective files in the repository (coming soon).

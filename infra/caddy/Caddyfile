@@ -1,0 +1,7 @@
+{
+    email {$AISPLINTER_ADMIN_EMAIL}
+}
+
+{$AISPLINTER_PUBLIC_DOMAIN} {
+    reverse_proxy aisplinter-api:8747
+}

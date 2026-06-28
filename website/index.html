@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="AISplinter — open-source middleware for AI plans, budgets, and proxy. Self-hosted."
+    />
+    <title>AISplinter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --text: #e8f4ff;
+        --muted: #8ba3bc;
+        --accent: #6ee7ff;
+        --accent-dim: #3db8d4;
+        --violet: #a78bfa;
+        --glass: rgba(8, 16, 28, 0.55);
+        --border: rgba(110, 231, 255, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        height: 100%;
+        background: #030508;
+        color: var(--text);
+        font-family: 'Instrument Sans', system-ui, sans-serif;
+        overflow-x: hidden;
+      }
+
+      #hero-canvas {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+      }
+
+      .page {
+        position: relative;
+        z-index: 1;
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        pointer-events: none;
+      }
+
+      .page > * {
+        pointer-events: auto;
+      }
+
+      .hero {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 2rem 1.5rem 6rem;
+        max-width: 42rem;
+        margin: 0 auto;
+        opacity: 0;
+        transform: translateY(1.25rem);
+        transition: opacity 1.2s ease, transform 1.2s ease;
+      }
+
+      .hero.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--accent-dim);
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        font-size: clamp(2.4rem, 8vw, 3.75rem);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.05;
+        background: linear-gradient(135deg, #fff 0%, var(--accent) 45%, var(--violet) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .tagline {
+        margin-top: 1.25rem;
+        font-size: 1.125rem;
+        line-height: 1.55;
+        color: var(--muted);
+        max-width: 32rem;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: center;
+        margin-top: 2rem;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.65rem 1.25rem;
+        border-radius: 999px;
+        font-size: 0.9375rem;
+        font-weight: 500;
+        text-decoration: none;
+        border: 1px solid var(--border);
+        background: var(--glass);
+        backdrop-filter: blur(12px);
+        color: var(--text);
+        transition: border-color 0.2s, background 0.2s, transform 0.15s;
+      }
+
+      .btn:hover {
+        border-color: rgba(110, 231, 255, 0.35);
+        background: rgba(14, 28, 48, 0.75);
+        transform: translateY(-1px);
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, rgba(61, 184, 212, 0.35), rgba(167, 139, 250, 0.25));
+        border-color: rgba(110, 231, 255, 0.3);
+      }
+
+      .footer {
+        padding: 2rem 1.5rem 3rem;
+        max-width: 52rem;
+        margin: 0 auto;
+        width: 100%;
+        opacity: 0;
+        transition: opacity 1s ease 0.3s;
+      }
+
+      .footer.visible {
+        opacity: 1;
+      }
+
+      .footer h2 {
+        font-size: 0.75rem;
+        font-family: 'JetBrains Mono', monospace;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 1rem;
+      }
+
+      .project-grid {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      @media (min-width: 520px) {
+        .project-grid {
+          grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+        }
+      }
+
+      .project-card {
+        display: block;
+        padding: 1rem 1.15rem;
+        border-radius: 0.75rem;
+        border: 1px solid var(--border);
+        background: var(--glass);
+        backdrop-filter: blur(10px);
+        text-decoration: none;
+        color: inherit;
+        transition: border-color 0.2s;
+      }
+
+      .project-card:hover {
+        border-color: rgba(110, 231, 255, 0.28);
+      }
+
+      .project-card strong {
+        display: block;
+        font-weight: 600;
+      }
+
+      .project-card span {
+        display: block;
+        margin-top: 0.25rem;
+        font-size: 0.875rem;
+        color: var(--muted);
+      }
+
+      .loader {
+        position: fixed;
+        inset: 0;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #030508;
+        transition: opacity 0.8s ease, visibility 0.8s;
+      }
+
+      .loader.done {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .loader-gem {
+        width: 2rem;
+        height: 2rem;
+        background: linear-gradient(135deg, var(--accent), var(--violet));
+        clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+        animation: pulse-gem 1.2s ease-in-out infinite;
+      }
+
+      @keyframes pulse-gem {
+        0%,
+        100% {
+          transform: scale(1) rotate(0deg);
+          opacity: 0.7;
+        }
+        50% {
+          transform: scale(1.15) rotate(12deg);
+          opacity: 1;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .hero,
+        .footer {
+          opacity: 1;
+          transform: none;
+          transition: none;
+        }
+        .loader-gem {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="loader" id="loader" aria-hidden="true">
+      <div class="loader-gem"></div>
+    </div>
+
+    <canvas id="hero-canvas" aria-hidden="true"></canvas>
+
+    <div class="page">
+      <header class="hero" id="hero">
+        <p class="eyebrow">Open source · self-hosted</p>
+        <h1>AISplinter</h1>
+        <p class="tagline">
+          Middleware between your app and LLM providers. Provision scoped keys, enforce budgets,
+          proxy chat — your users never touch OpenRouter.
+        </p>
+        <nav class="actions" id="actions"></nav>
+      </header>
+
+      <footer class="footer" id="footer">
+        <h2>More from the maker</h2>
+        <div class="project-grid" id="projects"></div>
+      </footer>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+      (function () {
+        const cfg = window.AISPLINTER_SITE || {};
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        const actionsEl = document.getElementById('actions');
+        const projectsEl = document.getElementById('projects');
+        const links = [
+          { href: cfg.github || '#', label: 'GitHub', primary: true },
+          { href: cfg.docs || '#', label: 'Docs' },
+          { href: cfg.donate || '#', label: 'Support' },
+        ];
+        links.forEach(({ href, label, primary }) => {
+          const a = document.createElement('a');
+          a.className = 'btn' + (primary ? ' btn-primary' : '');
+          a.href = href;
+          a.textContent = label;
+          if (href === '#') a.setAttribute('aria-disabled', 'true');
+          actionsEl.appendChild(a);
+        });
+
+        (cfg.projects || []).forEach((p) => {
+          const a = document.createElement('a');
+          a.className = 'project-card';
+          a.href = p.url || '#';
+          a.innerHTML = `<strong>${p.name}</strong><span>${p.tagline || ''}</span>`;
+          projectsEl.appendChild(a);
+        });
+
+        if (reducedMotion) {
+          document.getElementById('loader').classList.add('done');
+          document.getElementById('hero').classList.add('visible');
+          document.getElementById('footer').classList.add('visible');
+          return;
+        }
+
+        const canvas = document.getElementById('hero-canvas');
+        const ctx = canvas.getContext('2d');
+        let w = 0;
+        let h = 0;
+        let dpr = 1;
+        let frame = 0;
+        let loadT = 0;
+        let planetReveal = 0;
+        let contentShown = false;
+        let nextBurst = 120;
+
+        const stars = [];
+        const shards = [];
+        const groundCrystals = [];
+
+        function resize() {
+          dpr = Math.min(window.devicePixelRatio || 1, 2);
+          w = window.innerWidth;
+          h = window.innerHeight;
+          canvas.width = w * dpr;
+          canvas.height = h * dpr;
+          canvas.style.width = w + 'px';
+          canvas.style.height = h + 'px';
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          initStars();
+          initGroundCrystals();
+        }
+
+        function initStars() {
+          stars.length = 0;
+          const n = Math.floor((w * h) / 9000);
+          for (let i = 0; i < n; i++) {
+            stars.push({
+              x: Math.random() * w,
+              y: Math.random() * h * 0.65,
+              r: Math.random() * 1.2 + 0.2,
+              tw: Math.random() * Math.PI * 2,
+            });
+          }
+        }
+
+        function initGroundCrystals() {
+          groundCrystals.length = 0;
+          const horizon = horizonY(w * 0.5);
+          for (let i = 0; i < 18; i++) {
+            const x = (i / 17) * (w + 120) - 60;
+            const baseY = horizon + 8 + Math.random() * 40;
+            groundCrystals.push({
+              x,
+              baseY,
+              height: 20 + Math.random() * 55,
+              width: 12 + Math.random() * 28,
+              hue: Math.random() > 0.5 ? 190 : 260,
+            });
+          }
+        }
+
+        function horizonY(x) {
+          const base = h * 0.68;
+          const curve = Math.pow((x - w * 0.5) / (w * 0.55), 2) * h * 0.08;
+          return base + curve;
+        }
+
+        function groundY(x) {
+          return horizonY(x) + 12;
+        }
+
+        class Shard {
+          constructor(x, y, vx, vy, size, hue, life) {
+            this.x = x;
+            this.y = y;
+            this.vx = vx;
+            this.vy = vy;
+            this.size = size;
+            this.hue = hue;
+            this.life = life;
+            this.rot = Math.random() * Math.PI * 2;
+            this.vr = (Math.random() - 0.5) * 0.08;
+            this.settled = false;
+          }
+
+          update() {
+            if (this.settled) return;
+            this.vy += 0.22;
+            this.vx *= 0.998;
+            this.x += this.vx;
+            this.y += this.vy;
+            this.rot += this.vr;
+            const gy = groundY(this.x);
+            if (this.y >= gy) {
+              this.y = gy;
+              this.vy *= -0.25;
+              this.vx *= 0.6;
+              this.vr *= 0.5;
+              if (Math.abs(this.vy) < 0.4) {
+                this.settled = true;
+                this.vy = 0;
+                this.vx = 0;
+              }
+            }
+            this.life -= 1;
+          }
+
+          draw(c) {
+            c.save();
+            c.translate(this.x, this.y);
+            c.rotate(this.rot);
+            const g = c.createLinearGradient(-this.size, -this.size, this.size, this.size);
+            g.addColorStop(0, `hsla(${this.hue}, 85%, 88%, 0.95)`);
+            g.addColorStop(0.5, `hsla(${this.hue}, 70%, 65%, 0.75)`);
+            g.addColorStop(1, `hsla(${this.hue + 40}, 60%, 45%, 0.5)`);
+            c.fillStyle = g;
+            c.beginPath();
+            c.moveTo(0, -this.size);
+            c.lineTo(this.size * 0.85, 0);
+            c.lineTo(0, this.size);
+            c.lineTo(-this.size * 0.7, this.size * 0.15);
+            c.closePath();
+            c.fill();
+            c.strokeStyle = `hsla(${this.hue}, 100%, 92%, 0.35)`;
+            c.lineWidth = 0.6;
+            c.stroke();
+            c.restore();
+          }
+        }
+
+        function burstDiamond(x, y) {
+          const hue = Math.random() > 0.4 ? 188 + Math.random() * 20 : 250 + Math.random() * 25;
+          const count = 10 + Math.floor(Math.random() * 10);
+          for (let i = 0; i < count; i++) {
+            const ang = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
+            const spd = 2 + Math.random() * 4.5;
+            shards.push(
+              new Shard(
+                x,
+                y,
+                Math.cos(ang) * spd,
+                Math.sin(ang) * spd - 2,
+                4 + Math.random() * 10,
+                hue,
+                600 + Math.random() * 400,
+              ),
+            );
+          }
+          for (let i = 0; i < 6; i++) {
+            shards.push(
+              new Shard(
+                x + (Math.random() - 0.5) * 8,
+                y + (Math.random() - 0.5) * 8,
+                (Math.random() - 0.5) * 2,
+                -Math.random() * 2,
+                2 + Math.random() * 4,
+                hue + 15,
+                400,
+              ),
+            );
+          }
+        }
+
+        function drawBigDiamond(c, x, y, scale, alpha) {
+          c.save();
+          c.translate(x, y);
+          c.scale(scale, scale);
+          c.globalAlpha = alpha;
+          const g = c.createRadialGradient(0, -5, 2, 0, 0, 28);
+          g.addColorStop(0, 'rgba(255,255,255,0.95)');
+          g.addColorStop(0.35, 'rgba(110,231,255,0.55)');
+          g.addColorStop(1, 'rgba(167,139,250,0.15)');
+          c.fillStyle = g;
+          c.beginPath();
+          c.moveTo(0, -22);
+          c.lineTo(16, -4);
+          c.lineTo(10, 20);
+          c.lineTo(-10, 20);
+          c.lineTo(-16, -4);
+          c.closePath();
+          c.fill();
+          c.strokeStyle = 'rgba(200,240,255,0.5)';
+          c.lineWidth = 1;
+          c.beginPath();
+          c.moveTo(0, -22);
+          c.lineTo(0, 20);
+          c.moveTo(-16, -4);
+          c.lineTo(16, -4);
+          c.stroke();
+          c.restore();
+        }
+
+        function drawPlanet(c) {
+          const reveal = planetReveal;
+          if (reveal <= 0) return;
+
+          const grad = c.createLinearGradient(0, h * 0.35, 0, h);
+          grad.addColorStop(0, 'rgba(12, 24, 42, 0)');
+          grad.addColorStop(0.45, `rgba(18, 40, 68, ${0.85 * reveal})`);
+          grad.addColorStop(1, `rgba(8, 14, 24, ${reveal})`);
+          c.fillStyle = grad;
+          c.fillRect(0, h * 0.3, w, h);
+
+          c.save();
+          c.globalAlpha = 0.35 * reveal;
+          for (let x = 0; x < w; x += 48) {
+            const y0 = horizonY(x);
+            c.strokeStyle = 'rgba(110, 231, 255, 0.08)';
+            c.beginPath();
+            c.moveTo(x, y0);
+            c.lineTo(x + 24, h);
+            c.stroke();
+          }
+          c.restore();
+
+          groundCrystals.forEach((cr) => {
+            const y = cr.baseY;
+            c.save();
+            c.globalAlpha = reveal;
+            const g = c.createLinearGradient(cr.x, y - cr.height, cr.x, y);
+            g.addColorStop(0, `hsla(${cr.hue}, 80%, 75%, 0.5)`);
+            g.addColorStop(1, `hsla(${cr.hue}, 50%, 35%, 0.25)`);
+            c.fillStyle = g;
+            c.beginPath();
+            c.moveTo(cr.x, y - cr.height);
+            c.lineTo(cr.x + cr.width * 0.5, y);
+            c.lineTo(cr.x - cr.width * 0.5, y);
+            c.closePath();
+            c.fill();
+            c.restore();
+          });
+
+          c.save();
+          c.globalAlpha = 0.5 * reveal;
+          c.strokeStyle = 'rgba(140, 220, 255, 0.25)';
+          c.lineWidth = 1;
+          c.beginPath();
+          for (let x = 0; x <= w; x += 4) {
+            const y = horizonY(x);
+            if (x === 0) c.moveTo(x, y);
+            else c.lineTo(x, y);
+          }
+          c.stroke();
+          c.restore();
+        }
+
+        function drawStars(c) {
+          stars.forEach((s) => {
+            const a = 0.35 + Math.sin(s.tw + frame * 0.02) * 0.25;
+            c.fillStyle = `rgba(200, 230, 255, ${a})`;
+            c.beginPath();
+            c.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            c.fill();
+          });
+        }
+
+        function tick() {
+          frame++;
+          loadT++;
+
+          if (loadT < 90) {
+            planetReveal = loadT / 90;
+          } else {
+            planetReveal = 1;
+          }
+
+          if (loadT === 100) {
+            burstDiamond(w * 0.55, h * 0.22);
+          }
+
+          if (loadT > 130 && !contentShown) {
+            contentShown = true;
+            document.getElementById('loader').classList.add('done');
+            document.getElementById('hero').classList.add('visible');
+            document.getElementById('footer').classList.add('visible');
+          }
+
+          if (frame > nextBurst && planetReveal > 0.85) {
+            burstDiamond(w * (0.25 + Math.random() * 0.5), h * (0.12 + Math.random() * 0.18));
+            nextBurst = frame + 180 + Math.random() * 220;
+          }
+
+          ctx.fillStyle = '#030508';
+          ctx.fillRect(0, 0, w, h);
+          drawStars(ctx);
+          drawPlanet(ctx);
+
+          for (let i = shards.length - 1; i >= 0; i--) {
+            const s = shards[i];
+            s.update();
+            s.draw(ctx);
+            if (s.life <= 0 && s.settled && Math.random() < 0.02) shards.splice(i, 1);
+          }
+
+          if (frame < 110) {
+            const t = Math.min(1, frame / 110);
+            drawBigDiamond(ctx, w * 0.5, h * 0.38, 0.5 + t * 0.5, (1 - t) * 0.9);
+          }
+
+          requestAnimationFrame(tick);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        requestAnimationFrame(tick);
+      })();
+    </script>
+  </body>
+</html>
