@@ -1,5 +1,7 @@
 # AISplinter
 
+**Repository:** https://github.com/javorvatchkov/aisplinter
+
 **AISplinter** is open-source middleware between your application and LLM providers. It provisions scoped upstream keys, enforces budgets, proxies requests, and emits webhooks — so your users get AI under **your brand** without creating provider accounts.
 
 ## Core features
