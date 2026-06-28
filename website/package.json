@@ -1,0 +1,9 @@
+{
+  "name": "aisplinter-website",
+  "private": true,
+  "description": "AISplinter static website",
+  "scripts": {
+    "build": "echo 'Static site — no build step required'",
+    "start": "npx serve . -l ${PORT:-3000} -s"
+  }
+}
