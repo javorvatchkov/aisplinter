@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Download and install AISplinter — open-source AI middleware." />
+    <title>Download · AISplinter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <nav class="site-nav">
+      <a class="logo" href="index.html"><span class="logo-mark"></span> AISplinter</a>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="download.html" aria-current="page">Download</a></li>
+        <li><a href="contact.html">Contact</a></li>
+        <li><a href="https://github.com/javorvatchkov/aisplinter" target="_blank" rel="noopener">GitHub</a></li>
+      </ul>
+    </nav>
+
+    <header class="page-header">
+      <h1>Get AISplinter</h1>
+      <p>Self-hosted in minutes. Choose the path that fits your stack — Docker, standalone, or embedded in Next.js.</p>
+    </header>
+
+    <main>
+      <section class="section">
+        <div class="tabs" role="tablist" aria-label="Install methods">
+          <button class="tab-btn active" role="tab" aria-selected="true" data-tab="docker">Docker</button>
+          <button class="tab-btn" role="tab" aria-selected="false" data-tab="standalone">Standalone</button>
+          <button class="tab-btn" role="tab" aria-selected="false" data-tab="nextjs">Next.js embed</button>
+        </div>
+
+        <div class="tab-panel active" id="panel-docker">
+          <div class="card">
+            <h3>1. Clone the repo</h3>
+            <div class="code-block">git clone https://github.com/javorvatchkov/aisplinter.git
+cd aisplinter</div>
+
+            <h3 style="margin-top:1.5rem">2. Configure environment</h3>
+            <div class="code-block">cp packages/server/.env.example apps/server/.env
+<span class="comment"># Edit apps/server/.env — set DATABASE_URL and AISPLINTER_OPENROUTER_KEY</span></div>
+
+            <h3 style="margin-top:1.5rem">3. Start with Docker Compose</h3>
+            <div class="code-block">docker compose up --build</div>
+            <p style="margin-top:0.75rem;color:var(--muted);font-size:0.9rem">The setup wizard runs on <strong style="color:var(--text)">http://localhost:8747</strong> the first time the database is empty.</p>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="panel-standalone">
+          <div class="card">
+            <h3>1. Requirements</h3>
+            <ul class="feature-list" style="margin:0.5rem 0 1rem">
+              <li>Node.js 20+ and pnpm 9+</li>
+              <li>PostgreSQL 14+ (local or Neon)</li>
+              <li>An OpenRouter management key</li>
+            </ul>
+
+            <h3>2. Install &amp; configure</h3>
+            <div class="code-block">git clone https://github.com/javorvatchkov/aisplinter.git
+cd aisplinter
+pnpm install
+cp packages/server/.env.example apps/server/.env
+<span class="comment"># Edit apps/server/.env</span></div>
+
+            <h3 style="margin-top:1.5rem">3. Run the dev server</h3>
+            <div class="code-block">pnpm dev</div>
+            <p style="margin-top:0.75rem;color:var(--muted);font-size:0.9rem">Turborepo starts the standalone server on port <strong style="color:var(--text)">8747</strong>.</p>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="panel-nextjs">
+          <div class="card">
+            <h3>1. Install the server package</h3>
+            <div class="code-block">pnpm add @aisplinter/server</div>
+
+            <h3 style="margin-top:1.5rem">2. Create the singleton</h3>
+            <div class="code-block"><span class="key">import</span> { createAisplinterApp } <span class="key">from</span> <span class="str">'@aisplinter/server'</span>;
+<span class="key">import</span> { createAisplinterSingleton } <span class="key">from</span> <span class="str">'@aisplinter/server/next'</span>;
+
+<span class="key">export const</span> getAisplinterApp = createAisplinterSingleton(<span class="key">async</span> () => {
+  <span class="key">const</span> { app } = <span class="key">await</span> createAisplinterApp({ basePath: <span class="str">'/api/aisplinter'</span> });
+  <span class="key">return</span> app;
+});</div>
+
+            <h3 style="margin-top:1.5rem">3. Wire the route</h3>
+            <div class="code-block"><span class="comment">// app/api/aisplinter/[...path]/route.ts</span>
+<span class="key">import</span> { getAisplinterApp } <span class="key">from</span> <span class="str">'@/lib/aisplinter-server'</span>;
+<span class="key">import</span> { createNextRouteHandlers } <span class="key">from</span> <span class="str">'@aisplinter/server/next'</span>;
+
+<span class="key">export const</span> { GET, POST, PUT, PATCH, DELETE, OPTIONS } =
+  createNextRouteHandlers(getAisplinterApp);</div>
+            <p style="margin-top:0.75rem;color:var(--muted);font-size:0.9rem">The admin panel is available at <strong style="color:var(--text)">/api/aisplinter/admin</strong> after setup.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" style="padding-top:0">
+        <div class="section-header">
+          <p class="eyebrow">Quick reference</p>
+          <h2>System requirements</h2>
+        </div>
+        <div class="card-grid">
+          <div class="card">
+            <div class="icon">&#9670;</div>
+            <h3>Runtime</h3>
+            <p>Node.js 20+ with native fetch. PNPM 9+ for workspace management.</p>
+          </div>
+          <div class="card">
+            <div class="icon">&#9670;</div>
+            <h3>Database</h3>
+            <p>PostgreSQL 14+. Works with local, Docker, or managed (Neon, Supabase).</p>
+          </div>
+          <div class="card">
+            <div class="icon">&#9670;</div>
+            <h3>Upstream</h3>
+            <p>OpenRouter management key or LiteLLM proxy for provider-neutral access.</p>
+          </div>
+          <div class="card">
+            <div class="icon">&#9670;</div>
+            <h3>Host</h3>
+            <p>Any host that can call <code>app.fetch()</code> — Hono, Express, Next.js, Bun, Deno.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <ul class="footer-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="download.html">Download</a></li>
+        <li><a href="contact.html">Contact</a></li>
+        <li><a href="https://github.com/javorvatchkov/aisplinter" target="_blank" rel="noopener">GitHub</a></li>
+      </ul>
+      <p>MIT / AGPL-3.0 · AISplinter contributors</p>
+    </footer>
+
+    <script>
+      (function () {
+        const tabs = document.querySelectorAll('.tab-btn');
+        const panels = document.querySelectorAll('.tab-panel');
+        tabs.forEach((tab) => {
+          tab.addEventListener('click', () => {
+            const target = tab.dataset.tab;
+            tabs.forEach((t) => {
+              t.classList.toggle('active', t === tab);
+              t.setAttribute('aria-selected', t === tab);
+            });
+            panels.forEach((p) => {
+              p.classList.toggle('active', p.id === 'panel-' + target);
+            });
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>
