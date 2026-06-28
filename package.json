@@ -6,7 +6,8 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "start": "node apps/server/dist/index.js"
   },
   "devDependencies": {
     "turbo": "^2.0.0",
