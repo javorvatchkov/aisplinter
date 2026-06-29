@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Contact the AISplinter team — open-source AI middleware." />
+    <title>Contact · AISplinter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <nav class="site-nav">
+      <a class="logo" href="index.html"><span class="logo-mark"></span> AISplinter</a>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="download.html">Download</a></li>
+        <li><a href="contact.html" aria-current="page">Contact</a></li>
+        <li><a href="https://github.com/javorvatchkov/aisplinter" target="_blank" rel="noopener">GitHub</a></li>
+      </ul>
+    </nav>
+
+    <header class="page-header">
+      <h1>Contact</h1>
+      <p>Questions, feedback, or contributions? We are building in the open and happy to help.</p>
+    </header>
+
+    <main>
+      <section class="section" style="padding-top:0">
+        <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); margin-bottom:3rem">
+          <div class="card" style="text-align:center">
+            <div class="icon" style="margin:0 auto 0.75rem">&#9670;</div>
+            <h3>GitHub Issues</h3>
+            <p style="margin-bottom:1rem">Bug reports, feature requests, and discussions.</p>
+            <a class="btn" href="https://github.com/javorvatchkov/aisplinter/issues" target="_blank" rel="noopener">Open Issues</a>
+          </div>
+          <div class="card" style="text-align:center">
+            <div class="icon" style="margin:0 auto 0.75rem">&#9670;</div>
+            <h3>Email</h3>
+            <p style="margin-bottom:1rem">General inquiries and partnership questions.</p>
+            <a class="btn" href="mailto:hello@aisplinter.dev">hello@aisplinter.dev</a>
+          </div>
+          <div class="card" style="text-align:center">
+            <div class="icon" style="margin:0 auto 0.75rem">&#9670;</div>
+            <h3>Documentation</h3>
+            <p style="margin-bottom:1rem">Developer setup, embed patterns, and API reference.</p>
+            <a class="btn" href="https://github.com/javorvatchkov/aisplinter/blob/main/docs/DEV_SETUP.md" target="_blank" rel="noopener">Read Docs</a>
+          </div>
+        </div>
+
+        <div class="section-header" style="margin-bottom:2rem">
+          <p class="eyebrow">Message</p>
+          <h2>Send a note</h2>
+          <p>No backend here — this opens your mail client.</p>
+        </div>
+
+        <form
+          class="card"
+          style="max-width: 32rem; margin: 0 auto;"
+          onsubmit="event.preventDefault(); window.location.href='mailto:hello@aisplinter.dev?subject='+encodeURIComponent(document.getElementById('subject').value)+'&body='+encodeURIComponent('Name: '+document.getElementById('name').value+'\n\n'+document.getElementById('body').value);"
+        >
+          <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" placeholder="Your name" required />
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="you@example.com" required />
+          </div>
+          <div class="form-group">
+            <label for="subject">Subject</label>
+            <input type="text" id="subject" name="subject" placeholder="What's this about?" required />
+          </div>
+          <div class="form-group">
+            <label for="body">Message</label>
+            <textarea id="body" name="body" placeholder="Tell us more..." required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Send via Email Client</button>
+        </form>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <ul class="footer-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="download.html">Download</a></li>
+        <li><a href="contact.html">Contact</a></li>
+        <li><a href="https://github.com/javorvatchkov/aisplinter" target="_blank" rel="noopener">GitHub</a></li>
+      </ul>
+      <p>MIT / AGPL-3.0 · AISplinter contributors</p>
+    </footer>
+  </body>
+</html>

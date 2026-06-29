@@ -2,6 +2,7 @@ node_modules/
 .turbo/
 **/*.tsbuildinfo
 **/dist/
+**/.next/
 .env
 .env.*
 !.env.example

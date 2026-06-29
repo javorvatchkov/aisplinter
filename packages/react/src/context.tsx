@@ -23,12 +23,15 @@ export const AisplinterProvider: React.FC<AisplinterProviderProps> = ({
   appearance,
   onBudgetExhausted,
   onError,
-  ...config
+  baseUrl,
+  devKey,
+  sessionToken,
 }) => {
   const [error, setError] = useState<AisplinterError | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const client = useMemo(() => {
+    const config: AisplinterConfig = { baseUrl, devKey, sessionToken };
     const baseClient = new AisplinterClient(config);
 
     const originalRequest = (baseClient as unknown as { request: (...args: unknown[]) => Promise<Response> })
@@ -56,7 +59,7 @@ export const AisplinterProvider: React.FC<AisplinterProviderProps> = ({
     };
 
     return baseClient;
-  }, [config, onBudgetExhausted, onError]);
+  }, [baseUrl, devKey, sessionToken, onBudgetExhausted, onError]);
 
   const mergedAppearance = appearance ?? {};
 
